@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef, createContext, useContext } from 'react';
+import React, { useState, useEffect, useRef, createContext, useContext, useMemo } from 'react';
+import api, { authApi, setToken } from './data/api';
 import {
   Sun, Moon, Bell, Search, Settings, Home, Heart,
   MapPin, Bed, Maximize2, Building2, Trash2, Phone, Bot,
@@ -9,7 +10,8 @@ import {
   Zap, FileText, Save, Smartphone, Monitor, Upload,
   AlertTriangle, DollarSign, Check, BellOff,
   ChevronDown, ChevronUp, Star, RefreshCw, Trash,
-  Calendar, BarChart3, Key
+  Calendar, BarChart3, Key,
+  Users
 } from 'lucide-react';
 
 // ═══════════════════════════════════════════════════════════════
@@ -263,81 +265,191 @@ const ALL_REGIONS = [
 ];
 
 // ═══════════════════════════════════════════════════════════════
-// LISTINGS DATA
-// ═══════════════════════════════════════════════════════════════
-export const mockListings = [
-  { id:1, title:'Premium Apartment in Mirabad', district:'Mirabad', city:'Tashkent', price:145000, estimatedValue:158000, pricePerM2:1708, rooms:3, size:85, floor:5, totalFloors:12, status:'underpriced', badge:'-8.4% Underpriced', images:['https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=600&auto=format&fit=crop'], address:'Mirabad Avenue, 14A, Tashkent', views:342, favorites:28, inquiries:12, description:'Stunning 3-bedroom apartment with panoramic city views. European renovation, designer furniture included.', amenities:['Air Conditioning','Parking','Security','Balcony','High-speed WiFi'], agent:{name:'Alisher Karimov',title:'Senior Agent',rating:4.9,reviews:87} },
-  { id:2, title:'City Tower Suite', district:'Yunusabad', city:'Tashkent', price:210000, estimatedValue:195000, pricePerM2:1615, rooms:2, size:130, floor:14, totalFloors:18, status:'overpriced', badge:'+7.2% Overpriced', images:['https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=600&auto=format&fit=crop'], address:'Tashkent City Tower, Block B', views:567, favorites:41, inquiries:19, description:'Luxury suite in Tashkent City. Breathtaking skyline views.', amenities:['Smart Home','Concierge','Pool','Gym','Valet Parking'], agent:{name:'Nilufar Rashidova',title:'Luxury Specialist',rating:4.8,reviews:64} },
-  { id:3, title:'Classic Flat in Chilanzar', district:'Chilanzar', city:'Tashkent', price:89000, estimatedValue:91000, pricePerM2:1247, rooms:2, size:72, floor:3, totalFloors:9, status:'fair', badge:'Fair Value', images:['https://images.unsplash.com/photo-1556912167-f556f1f39fdf?w=600&auto=format&fit=crop'], address:'Chilanzar District, Str. 3, Building 12', views:189, favorites:14, inquiries:6, description:'Well-maintained 2-bedroom flat in established residential area.', amenities:['Balcony','Storage Room','Intercom'], agent:{name:'Bobur Toshmatov',title:'Residential Agent',rating:4.6,reviews:43} },
-  { id:4, title:'Modern Studio in Mirzo Ulugbek', district:'Mirzo Ulugbek', city:'Tashkent', price:65000, estimatedValue:71000, pricePerM2:1444, rooms:1, size:45, floor:7, totalFloors:16, status:'underpriced', badge:'-8.0% Underpriced', images:['https://images.unsplash.com/photo-1484154218962-a197022b5858?w=600&auto=format&fit=crop'], address:'Mirzo Ulugbek District, New Building Complex', views:224, favorites:31, inquiries:9, description:'Compact modern studio perfect for young professionals.', amenities:['Air Conditioning','High-speed WiFi','Balcony'], agent:{name:'Alisher Karimov',title:'Senior Agent',rating:4.9,reviews:87} },
-  { id:5, title:'Family Villa in Yunusabad', district:'Yunusabad', city:'Tashkent', price:380000, estimatedValue:375000, pricePerM2:1520, rooms:5, size:250, floor:1, totalFloors:3, status:'fair', badge:'Fair Value', images:['https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600&auto=format&fit=crop'], address:'Yunusabad, Premium Quarter', views:412, favorites:55, inquiries:22, description:'Spacious family villa with private garden and swimming pool.', amenities:['Pool','Garden','Garage','Security','Smart Home'], agent:{name:'Nilufar Rashidova',title:'Luxury Specialist',rating:4.8,reviews:64} },
-  { id:6, title:'Budget Apartment in Sergeli', district:'Sergeli', city:'Tashkent', price:42000, estimatedValue:45000, pricePerM2:840, rooms:2, size:50, floor:2, totalFloors:5, status:'underpriced', badge:'-6.7% Underpriced', images:['https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&auto=format&fit=crop'], address:'Sergeli District, Block 14', views:98, favorites:8, inquiries:3, description:'Affordable 2-room apartment, recently repaired.', amenities:['Balcony','Storage'], agent:{name:'Bobur Toshmatov',title:'Residential Agent',rating:4.6,reviews:43} },
-  { id:7, title:'Penthouse in Yakkasaray', district:'Yakkasaray', city:'Tashkent', price:320000, estimatedValue:310000, pricePerM2:2133, rooms:4, size:150, floor:17, totalFloors:17, status:'overpriced', badge:'+3.2% Overpriced', images:['https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&auto=format&fit=crop'], address:'Yakkasaray, Central Tower', views:287, favorites:33, inquiries:15, description:'Top floor penthouse with 360° panoramic views of Tashkent.', amenities:['Terrace','Smart Home','Pool','Concierge','Gym'], agent:{name:'Nilufar Rashidova',title:'Luxury Specialist',rating:4.8,reviews:64} },
-  { id:8, title:'Renovated 3-Room in Almazar', district:'Almazar', city:'Tashkent', price:98000, estimatedValue:105000, pricePerM2:1225, rooms:3, size:80, floor:4, totalFloors:10, status:'underpriced', badge:'-6.7% Underpriced', images:['https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=600&auto=format&fit=crop'], address:'Almazar District, Dustlik Street', views:156, favorites:19, inquiries:7, description:'Fully renovated 3-bedroom apartment with modern finishes.', amenities:['Air Conditioning','Balcony','Parking'], agent:{name:'Alisher Karimov',title:'Senior Agent',rating:4.9,reviews:87} },
-  { id:9, title:'Studio Near Compass', district:'Mirabad', city:'Tashkent', price:75000, estimatedValue:78000, pricePerM2:1667, rooms:1, size:45, floor:8, totalFloors:14, status:'fair', badge:'Fair Value', images:['https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&auto=format&fit=crop'], address:'Mirabad, Compass Shopping Center Area', views:201, favorites:22, inquiries:8, description:'Modern studio in prime location near Compass shopping mall.', amenities:['High-speed WiFi','Security','Air Conditioning'], agent:{name:'Bobur Toshmatov',title:'Residential Agent',rating:4.6,reviews:43} },
-  { id:10, title:'Luxury 4-Room in Samarkand', district:'Markaz', city:'Samarkand', price:185000, estimatedValue:190000, pricePerM2:925, rooms:4, size:200, floor:3, totalFloors:8, status:'fair', badge:'Fair Value', images:['https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=600&auto=format&fit=crop'], address:'Samarkand, Registon yonida', views:134, favorites:16, inquiries:5, description:'Spacious luxury apartment near historical Registon square.', amenities:['Garden View','Parking','Security','Balcony'], agent:{name:'Nilufar Rashidova',title:'Luxury Specialist',rating:4.8,reviews:64} },
-  { id:11, title:'Cozy 2-Room in Bukhara', district:'Shahrisabz', city:'Bukhara', price:58000, estimatedValue:62000, pricePerM2:829, rooms:2, size:70, floor:2, totalFloors:5, status:'underpriced', badge:'-6.5% Underpriced', images:['https://images.unsplash.com/photo-1615529179035-bd38e8fde8e0?w=600&auto=format&fit=crop'], address:"Bukhara, Shahriston ko'chasi", views:89, favorites:11, inquiries:4, description:'Charming apartment in ancient Bukhara city center.', amenities:['Historic View','Courtyard','Air Conditioning'], agent:{name:'Bobur Toshmatov',title:'Residential Agent',rating:4.6,reviews:43} },
-  { id:12, title:'New Build in Namangan', district:'Eski shahar', city:'Namangan', price:72000, estimatedValue:74000, pricePerM2:800, rooms:3, size:90, floor:5, totalFloors:9, status:'fair', badge:'Fair Value', images:['https://images.unsplash.com/photo-1574362848149-11496d93a7c7?w=600&auto=format&fit=crop'], address:'Namangan, Yangi mahalla', views:112, favorites:9, inquiries:3, description:'Brand new 3-room apartment in Namangan city.', amenities:['New Building','Balcony','Parking','Air Conditioning'], agent:{name:'Alisher Karimov',title:'Senior Agent',rating:4.9,reviews:87} },
-  { id:13, title:'Investment Flat in Fergana', district:'Markaz', city:'Fergana', price:82000, estimatedValue:88000, pricePerM2:820, rooms:2, size:100, floor:3, totalFloors:7, status:'underpriced', badge:'-6.8% Underpriced', images:['https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&auto=format&fit=crop'], address:'Fergana, Central Boulevard', views:145, favorites:17, inquiries:6, description:'Great investment opportunity in Fergana city center.', amenities:['Balcony','Security','High-speed WiFi'], agent:{name:'Nilufar Rashidova',title:'Luxury Specialist',rating:4.8,reviews:64} },
-  { id:14, title:'Villa in Tashkent Hills', district:'Yunusabad', city:'Tashkent', price:550000, estimatedValue:540000, pricePerM2:2200, rooms:6, size:250, floor:1, totalFloors:2, status:'overpriced', badge:'+1.9% Overpriced', images:['https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=600&auto=format&fit=crop'], address:'Yunusabad Hills, Private Road', views:321, favorites:47, inquiries:18, description:'Exclusive private villa in the prestigious hills area.', amenities:['Pool','Garden','Garage','Smart Home','Tennis Court','Cinema'], agent:{name:'Nilufar Rashidova',title:'Luxury Specialist',rating:4.8,reviews:64} },
-  { id:15, title:'Affordable Studio in Chilanzar', district:'Chilanzar', city:'Tashkent', price:38000, estimatedValue:42000, pricePerM2:844, rooms:1, size:45, floor:1, totalFloors:5, status:'underpriced', badge:'-9.5% Underpriced', images:['https://images.unsplash.com/photo-1536376072261-38c75010e6c9?w=600&auto=format&fit=crop'], address:"Chilanzar, Bog'cha Street", views:78, favorites:12, inquiries:4, description:'Compact affordable studio, perfect for first-time buyers.', amenities:['Balcony'], agent:{name:'Bobur Toshmatov',title:'Residential Agent',rating:4.6,reviews:43} },
-  { id:16, title:'Premium Flat in Center-1', district:'Center-1', city:'Tashkent', price:195000, estimatedValue:200000, pricePerM2:1950, rooms:3, size:100, floor:9, totalFloors:12, status:'fair', badge:'Fair Value', images:['https://images.unsplash.com/photo-1567767292278-a4f21aa2d36e?w=600&auto=format&fit=crop'], address:'Center-1, Amir Temur Boulevard', views:289, favorites:34, inquiries:14, description:'Premium 3-bedroom flat on Amir Temur Boulevard.', amenities:['Smart Home','Concierge','Parking','Security','Gym'], agent:{name:'Alisher Karimov',title:'Senior Agent',rating:4.9,reviews:87} },
-  { id:17, title:'3-Room in Mirzo Ulugbek', district:'Mirzo Ulugbek', city:'Tashkent', price:115000, estimatedValue:120000, pricePerM2:1278, rooms:3, size:90, floor:6, totalFloors:12, status:'underpriced', badge:'-4.2% Underpriced', images:['https://images.unsplash.com/photo-1560185893-a55cbc8c57e8?w=600&auto=format&fit=crop'], address:'Mirzo Ulugbek, Science Street', views:167, favorites:21, inquiries:8, description:'Spacious 3-room apartment near science institutes.', amenities:['Balcony','Parking','Air Conditioning'], agent:{name:'Bobur Toshmatov',title:'Residential Agent',rating:4.6,reviews:43} },
-  { id:18, title:'Duplex in Yakkasaray', district:'Yakkasaray', city:'Tashkent', price:260000, estimatedValue:255000, pricePerM2:1733, rooms:4, size:150, floor:10, totalFloors:14, status:'overpriced', badge:'+2.0% Overpriced', images:['https://images.unsplash.com/photo-1416331108676-a22ccb276e35?w=600&auto=format&fit=crop'], address:'Yakkasaray, Navoi Street', views:198, favorites:26, inquiries:11, description:'Two-level luxury duplex apartment with stunning city views.', amenities:['Terrace','Smart Home','Parking','Security'], agent:{name:'Nilufar Rashidova',title:'Luxury Specialist',rating:4.8,reviews:64} },
-];
-
-// ═══════════════════════════════════════════════════════════════
-// AUTH
-// ═══════════════════════════════════════════════════════════════
-const ADMIN_USER = { id:'admin', name:'Administrator', email:'admin@gmail.com', password:'admin123', role:'admin', credits:999, phone:'+998 99 000 00 00', avatar:null, joinDate:'2023-01-01' };
-let registeredUsers = [ADMIN_USER];
-const findUser = (email, password) => registeredUsers.find(u => u.email===email && u.password===password);
-const findUserByEmail = (email) => registeredUsers.find(u => u.email===email);
-const updateUser = (id, updates) => { registeredUsers = registeredUsers.map(u => u.id===id ? {...u,...updates} : u); };
-const registerUser = (name, email, password) => {
-  const user = { id:'user_'+Date.now(), name, email, password, role:'user', credits:50, phone:'', avatar:null, joinDate:new Date().toISOString().split('T')[0] };
-  registeredUsers.push(user); return user;
-};
-
-// ═══════════════════════════════════════════════════════════════
 // CONTEXT
 // ═══════════════════════════════════════════════════════════════
 const AppContext = createContext(null);
 const useApp = () => useContext(AppContext);
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const UPLOADS_URL = API_URL.replace('/api', '');
+
+const getImageUrl = (url) => {
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
+  return `${UPLOADS_URL}${url}`;
+};
 
 function AppProvider({ children }) {
   const [theme, setTheme] = useState('light');
   const [lang, setLang] = useState('uz');
   const [user, setUser] = useState(null);
   const [favorites, setFavorites] = useState([]);
-  const [publishedListings, setPublishedListings] = useState([]);
-  const [notifications, setNotifications] = useState([
-    { id:1, type:'price_drop', read:false, time:'2 daqiqa oldin', listing:'Premium Apartment in Mirabad', amount:'-$5,000' },
-    { id:2, type:'insight', read:false, time:'15 daqiqa oldin', text:'Mirabad tumani narxlari bu oyda 4.2% oshdi' },
-    { id:3, type:'new_listing', read:false, time:'1 soat oldin', listing:'Modern Studio in Yunusabad' },
-    { id:4, type:'welcome', read:true, time:'Bugun', text:'UyNarx ga xush kelibsiz!' },
-  ]);
+  const [listings, setListings] = useState([]);
+  const [regions, setRegions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState([]);
 
-  useEffect(() => { document.documentElement.setAttribute('data-theme', theme); }, [theme]);
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
+  // ─── Dinamik statistikalar ────────────────────────────────────
+  // listings va regions dan hisoblanadi, o'zgarganda avtomatik yangilanadi
+  const stats = useMemo(() => {
+    const totalListings = listings.length;
+    const totalRegions = regions.length;
+
+    // Haqiqiy o'rtacha narx/m² — barcha e'lonlardan
+    const listingsWithSize = listings.filter(l => l.price && l.size && l.size > 0);
+    const avgPriceM2 = listingsWithSize.length > 0
+      ? Math.round(listingsWithSize.reduce((sum, l) => sum + (l.price / l.size), 0) / listingsWithSize.length)
+      : (regions.length > 0
+          ? Math.round(regions.reduce((s, r) => s + (r.price || 0), 0) / regions.length)
+          : 0);
+
+    // Eng yuqori score — aniqlik foizi sifatida
+    const topScore = regions.length > 0 ? Math.max(...regions.map(r => r.score || 0)) : 0;
+
+    // Arzon e'lonlar soni
+    const underpricedCount = listings.filter(l => l.status === 'underpriced').length;
+
+    // Jami views
+    const totalViews = listings.reduce((sum, l) => sum + (l.views || 0), 0);
+
+    // O'rtacha xona soni
+    const avgRooms = listings.length > 0
+      ? (listings.reduce((sum, l) => sum + (parseInt(l.rooms) || 0), 0) / listings.length).toFixed(1)
+      : 0;
+
+    return { totalListings, totalRegions, avgPriceM2, topScore, underpricedCount, totalViews, avgRooms };
+  }, [listings, regions]);
+
+  useEffect(() => {
+    const init = async () => {
+      try {
+        setLoading(true);
+        if (localStorage.getItem('token')) {
+          try {
+            const userData = await api.getMe();
+            setUser(userData.user || userData);
+            try {
+              const favs = await api.getFavorites();
+              setFavorites(favs?.map(f => f._id || f.id) || []);
+            } catch (favErr) {
+              console.error("Favorites error", favErr);
+            }
+          } catch (e) {
+            console.error("Auth error", e);
+            if (e.message?.includes('401') ||
+                e.message?.toLowerCase().includes('unauthorized') ||
+                e.message?.toLowerCase().includes('token')) {
+              localStorage.removeItem('token');
+            }
+          }
+        }
+
+        const listingsData = await api.getListings();
+        setListings(listingsData.listings || listingsData);
+
+        const marketData = await api.getMarket();
+        const mergedRegions = ALL_REGIONS.map(r => {
+          const backendData = marketData.find(m => m.city.toUpperCase() === r.city.toUpperCase());
+          return backendData ? { ...r, ...backendData } : r;
+        });
+        setRegions(mergedRegions);
+
+        if (localStorage.getItem('token')) {
+          try {
+            const notifs = await api.getNotifications();
+            setNotifications(notifs?.notifications || notifs || []);
+          } catch (e) {
+            console.error("Notifications error", e);
+          }
+        }
+      } catch (err) {
+        console.error("Initialization error", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    init();
+  }, []);
+
   const t = T[lang];
-  const toggleTheme = () => setTheme(t => t==='light'?'dark':'light');
-  const login = (u) => setUser(u);
-  const logout = () => setUser(null);
-  const toggleFavorite = (id) => setFavorites(f => f.includes(id)?f.filter(x=>x!==id):[...f,id]);
-  const updateCurrentUser = (updates) => { updateUser(user.id,updates); setUser(prev=>({...prev,...updates})); };
-  const addListing = (listing) => { setPublishedListings(p=>[listing,...p]); setNotifications(n=>[{id:Date.now(),type:'new_listing',read:false,time:'Hozir',listing:listing.title},...n]); };
-  const markAllRead = () => setNotifications(n=>n.map(x=>({...x,read:true})));
-  const unreadCount = notifications.filter(n=>!n.read).length;
+  const toggleTheme = () => setTheme(t => t === 'light' ? 'dark' : 'light');
+
+  const login = async (email, password) => {
+    const data = await api.login(email, password);
+    setUser(data.user);
+    try {
+      const favs = await api.getFavorites();
+      setFavorites(favs?.map(f => f._id || f.id) || []);
+    } catch { setFavorites([]); }
+    try {
+      const notifs = await api.getNotifications();
+      setNotifications(notifs?.notifications || notifs || []);
+    } catch { setNotifications([]); }
+    return data;
+  };
+
+  const logout = () => {
+    authApi.logout();
+    setUser(null);
+    setFavorites([]);
+    setNotifications([]);
+  };
+
+  const toggleFavorite = async (id) => {
+    try {
+      await api.toggleFavorite(id);
+      setFavorites(f => f.includes(id) ? f.filter(x => x !== id) : [...f, id]);
+    } catch (err) {
+      console.error("Favorite error", err);
+    }
+  };
+
+  const updateCurrentUser = async (updates) => {
+    try {
+      const data = await authApi.updateProfile(updates);
+      setUser(data.user || data);
+      return data;
+    } catch (err) {
+      console.error("Update profile error", err);
+      throw err;
+    }
+  };
+
+  const addListing = (listing) => {
+    setListings(p => [listing, ...p]);
+    setNotifications(n => [{ _id: Date.now(), type: 'new_listing', read: false, time: 'Hozir', listing: listing.title }, ...n]);
+  };
+
+  const markAllRead = async () => {
+    try {
+      await api.markAllNotificationsRead();
+      setNotifications(n => n.map(x => ({ ...x, read: true })));
+    } catch (err) {
+      console.error("Notification error", err);
+    }
+  };
+
+  const unreadCount = (Array.isArray(notifications) ? notifications : []).filter(n => !n.read).length;
 
   return (
-    <AppContext.Provider value={{ theme,toggleTheme,lang,setLang,t,user,login,logout,favorites,toggleFavorite,updateCurrentUser,publishedListings,addListing,notifications,markAllRead,unreadCount }}>
+    <AppContext.Provider value={{
+      theme, toggleTheme, lang, setLang, t, user, login, logout,
+      favorites, toggleFavorite, updateCurrentUser, listings, setListings,
+      regions, loading, addListing, notifications, markAllRead, unreadCount,
+      getImageUrl, UPLOADS_URL,
+      stats  // ← dinamik statistikalar
+    }}>
       {children}
     </AppContext.Provider>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════
-// CSS — EXACT COLORS AS SPECIFIED
+// CSS
 // ═══════════════════════════════════════════════════════════════
 const GlobalStyles = () => (
   <style>{`
@@ -493,7 +605,6 @@ const GlobalStyles = () => (
     .section-title { font-family:'Sora',sans-serif; font-size:28px; font-weight:700; color:var(--text); }
     .section-sub { color:var(--text2); font-size:15px; margin-top:6px; }
 
-    /* AI box — only in profile sidebar */
     .ai-box { background:var(--primary); color:#fff; border-radius:var(--radius); padding:16px; }
     [data-theme="dark"] .ai-box { background:#1C2A3A; border:1px solid var(--primary); color:var(--text); }
 
@@ -526,7 +637,6 @@ const GlobalStyles = () => (
     .step-line { width:60px; height:2px; background:var(--border); margin:0 4px 18px; transition:background 0.3s; }
     .step-line.done { background:var(--primary); }
 
-    /* HERO — uy rasmi bilan */
     .hero {
       height:500px;
       background: linear-gradient(135deg,rgba(124,58,237,0.90),rgba(109,40,217,0.82)),
@@ -543,12 +653,10 @@ const GlobalStyles = () => (
     .hero-search .input { flex:1; min-width:160px; }
     .hero-search .select { flex:0 0 160px; }
 
-    /* Floating house SVG */
     .hero-house { position:absolute; right:60px; top:50%; transform:translateY(-55%); width:200px; height:220px; pointer-events:none; }
     @media(max-width:900px){.hero-house{display:none;}}
     .hero-house svg { width:100%; height:100%; }
 
-    /* Floating info cards on hero */
     .hero-chip { position:absolute; backdrop-filter:blur(12px); background:rgba(255,255,255,0.14); border:1px solid rgba(255,255,255,0.28); border-radius:24px; padding:8px 14px; color:#fff; font-size:12px; font-weight:600; display:flex; align-items:center; gap:6px; white-space:nowrap; }
     .hero-chip-1 { bottom:48px; left:48px; animation:float 4s ease-in-out infinite; }
     .hero-chip-2 { top:72px; right:300px; animation:float 5s ease-in-out 0.5s infinite; }
@@ -619,82 +727,58 @@ const getBadgeClass = (s) => s==='underpriced'?'badge badge-under':s==='overpric
 const getBarClass = (s) => s==='underpriced'?'listing-bar bar-under':s==='overpriced'?'listing-bar bar-over':'listing-bar bar-fair';
 
 // ═══════════════════════════════════════════════════════════════
-// HOUSE SVG ANIMATION — uyga bog'liq
+// HOUSE SVG ANIMATION
 // ═══════════════════════════════════════════════════════════════
 function HouseAnimation() {
   return (
     <div className="hero-house">
       <svg viewBox="0 0 200 230" fill="none" xmlns="http://www.w3.org/2000/svg">
-        {/* Stars background */}
         {[[15,18],[185,12],[170,55],[10,70],[190,100],[30,160]].map(([x,y],i)=>(
           <circle key={i} cx={x} cy={y} r="1.8" fill="white"
             style={{animation:`windowGlow ${1.5+i*0.4}s ease-in-out ${i*0.3}s infinite`,opacity:0.7}}/>
         ))}
-
-        {/* Cloud */}
         <g style={{animation:'floatSide 5s ease-in-out infinite',opacity:0.25}}>
           <ellipse cx="35" cy="28" rx="18" ry="9" fill="white"/>
           <ellipse cx="50" cy="24" rx="13" ry="8" fill="white"/>
           <ellipse cx="22" cy="32" rx="10" ry="6" fill="white"/>
         </g>
-
-        {/* Left tree */}
         <g style={{animation:'treeSway 3s ease-in-out infinite',transformOrigin:'28px 190px'}}>
           <rect x="25" y="168" width="5" height="28" rx="2" fill="rgba(255,255,255,0.3)"/>
           <ellipse cx="27.5" cy="158" rx="16" ry="20" fill="rgba(16,185,129,0.55)" stroke="rgba(255,255,255,0.35)" strokeWidth="1"/>
           <ellipse cx="27.5" cy="148" rx="12" ry="16" fill="rgba(16,185,129,0.45)" stroke="rgba(255,255,255,0.3)" strokeWidth="1"/>
         </g>
-
-        {/* Right tree */}
         <g style={{animation:'treeSway 4s ease-in-out 0.8s infinite',transformOrigin:'170px 190px'}}>
           <rect x="167" y="168" width="5" height="28" rx="2" fill="rgba(255,255,255,0.3)"/>
           <ellipse cx="169.5" cy="160" rx="13" ry="17" fill="rgba(16,185,129,0.5)" stroke="rgba(255,255,255,0.3)" strokeWidth="1"/>
           <ellipse cx="169.5" cy="150" rx="10" ry="14" fill="rgba(16,185,129,0.4)" stroke="rgba(255,255,255,0.25)" strokeWidth="1"/>
         </g>
-
-        {/* House body */}
         <rect x="45" y="118" width="110" height="80" rx="4"
           fill="rgba(255,255,255,0.18)" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
-
-        {/* Roof */}
         <path d="M34 122 L100 58 L166 122 Z"
           fill="rgba(124,58,237,0.75)" stroke="rgba(255,255,255,0.65)" strokeWidth="2"
           style={{animation:'roofBob 5s ease-in-out infinite'}}/>
-
-        {/* Chimney */}
         <rect x="128" y="72" width="12" height="28" rx="2"
           fill="rgba(255,255,255,0.35)" stroke="rgba(255,255,255,0.55)" strokeWidth="1.5"/>
-        {/* Smoke puffs */}
         {[0,1,2].map(i=>(
           <circle key={i} cx={134+i*1.5} cy={64-i*10} r={3+i*2}
             fill="rgba(255,255,255,0.22)"
             style={{animation:`chimneySteam ${1.5+i*0.5}s ease-out ${i*0.5}s infinite`}}/>
         ))}
-
-        {/* Left window */}
         <rect x="58" y="132" width="30" height="26" rx="3"
           fill="rgba(255,230,80,0.55)" stroke="rgba(255,255,255,0.65)" strokeWidth="1.5"
           style={{animation:`windowGlow 2.5s ease-in-out infinite`}}/>
         <line x1="73" y1="132" x2="73" y2="158" stroke="rgba(255,255,255,0.5)" strokeWidth="1"/>
         <line x1="58" y1="145" x2="88" y2="145" stroke="rgba(255,255,255,0.5)" strokeWidth="1"/>
-
-        {/* Right window */}
         <rect x="112" y="132" width="30" height="26" rx="3"
           fill="rgba(160,220,255,0.5)" stroke="rgba(255,255,255,0.65)" strokeWidth="1.5"
           style={{animation:`windowGlow 3s ease-in-out 0.8s infinite`}}/>
         <line x1="127" y1="132" x2="127" y2="158" stroke="rgba(255,255,255,0.5)" strokeWidth="1"/>
         <line x1="112" y1="145" x2="142" y2="145" stroke="rgba(255,255,255,0.5)" strokeWidth="1"/>
-
-        {/* Door */}
         <rect x="82" y="158" width="36" height="40" rx="4"
           fill="rgba(255,255,255,0.22)" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
         <circle cx="113" cy="178" r="2.5" fill="rgba(255,220,0,0.9)"/>
-
-        {/* Ground */}
         <path d="M10 198 Q100 192 190 198 L190 210 L10 210 Z"
           fill="rgba(255,255,255,0.12)"/>
-
-        {/* Floating price tag */}
         <g style={{animation:'priceTag 3s ease-in-out infinite'}}>
           <rect x="54" y="38" width="82" height="26" rx="13"
             fill="rgba(124,58,237,0.92)" stroke="rgba(255,255,255,0.7)" strokeWidth="1.5"/>
@@ -763,16 +847,16 @@ function NotificationsDropdown({ onClose }) {
         <span style={{fontWeight:700,fontSize:15,color:'var(--text)'}}>{notifT.title}</span>
         <button className="btn-ghost btn-sm" style={{fontSize:12}} onClick={markAllRead}>{notifT.mark_all}</button>
       </div>
-      {notifications.length===0
-        ?<div style={{padding:32,textAlign:'center',color:'var(--text3)'}}><BellOff size={24} style={{margin:'0 auto 8px',display:'block',opacity:0.4}}/><p style={{fontSize:13}}>{notifT.empty}</p></div>
-        :notifications.map(n=>(
-          <div key={n.id} className={`notif-item ${!n.read?'unread':''}`}>
+      {notifications.length === 0
+        ? <div style={{ padding: 32, textAlign: 'center', color: 'var(--text3)' }}><BellOff size={24} style={{ margin: '0 auto 8px', display: 'block', opacity: 0.4 }} /><p style={{ fontSize: 13 }}>{notifT.empty}</p></div>
+        : notifications.map(n => (
+          <div key={n.id || n._id} className={`notif-item ${!n.read ? 'unread' : ''}`}>
             {getIcon(n.type)}
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:13,fontWeight:!n.read?700:400,color:'var(--text)',lineHeight:1.4,marginBottom:2,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{getTitle(n)}</div>
-              <div style={{fontSize:11,color:'var(--text3)',display:'flex',alignItems:'center',gap:4}}><Clock size={10}/>{n.time}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: !n.read ? 700 : 400, color: 'var(--text)', lineHeight: 1.4, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{getTitle(n)}</div>
+              <div style={{ fontSize: 11, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 4 }}><Clock size={10} />{new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
             </div>
-            {!n.read&&<div style={{width:8,height:8,borderRadius:'50%',background:'var(--primary)',flexShrink:0,marginTop:4}}/>}
+            {!n.read && <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--primary)', flexShrink: 0, marginTop: 4 }} />}
           </div>
         ))
       }
@@ -791,22 +875,35 @@ function AuthModal({ onClose }) {
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const handleLogin = () => {
-    setLoading(true); setError('');
-    setTimeout(()=>{ const f=findUser(email,password); if(f){login(f);onClose();}else setError("Email yoki parol noto'g'ri"); setLoading(false); },600);
+
+  const handleLogin = async () => {
+    try {
+      setLoading(true); setError('');
+      await login(email, password);
+      onClose();
+    } catch (err) {
+      setError(err.message || "Email yoki parol noto'g'ri");
+    } finally { setLoading(false); }
   };
-  const handleRegister = () => {
-    if (!name.trim()||!email.trim()||!password.trim()){setError("Barcha maydonlarni to'ldiring");return;}
-    if (password.length<6){setError("Parol kamida 6 ta belgi");return;}
-    if (findUserByEmail(email)){setError("Bu email allaqachon ro'yxatdan o'tgan");return;}
-    setLoading(true);
-    setTimeout(()=>{const u=registerUser(name,email,password);login(u);onClose();setLoading(false);},600);
+
+  const handleRegister = async () => {
+    if (!name.trim() || !email.trim() || !password.trim()) { setError("Barcha maydonlarni to'ldiring"); return; }
+    if (password.length < 6) { setError("Parol kamida 6 ta belgi"); return; }
+    try {
+      setLoading(true); setError('');
+      await api.register(name, email, password);
+      await login(email, password);
+      onClose();
+    } catch (err) {
+      setError(err.message || "Ro'yxatdan o'tishda xato yuz berdi");
+    } finally { setLoading(false); }
   };
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={e=>e.stopPropagation()}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
-          <div style={{fontFamily:'Sora,sans-serif',fontWeight:800,fontSize:20,color:'var(--primary)'}}>qulayUy<span style={{color:'var(--tertiary)'}}> </span></div>
+          <div style={{fontFamily:'Sora,sans-serif',fontWeight:800,fontSize:20,color:'var(--primary)'}}>qulayUy</div>
           <button className="nav-icon-btn" onClick={onClose}><X size={16}/></button>
         </div>
         <div style={{display:'flex',background:'var(--bg3)',borderRadius:8,padding:4,marginBottom:20}}>
@@ -883,32 +980,34 @@ function Navbar({ page, setPage }) {
 // ═══════════════════════════════════════════════════════════════
 // LISTING CARD
 // ═══════════════════════════════════════════════════════════════
-function ListingCard({ listing, onClick, animDelay=0 }) {
-  const { favorites, toggleFavorite } = useApp();
-  const isFav = favorites.includes(listing.id);
-  const StatusIcon = listing.status==='underpriced'?ArrowUpRight:listing.status==='overpriced'?ArrowDownRight:ArrowRight;
+function ListingCard({ listing, onClick, animDelay = 0 }) {
+  const { favorites, toggleFavorite, getImageUrl } = useApp();
+  const listingId = listing._id || listing.id;
+  const isFav = favorites.includes(listingId);
+  const StatusIcon = listing.status === 'underpriced' ? ArrowUpRight : listing.status === 'overpriced' ? ArrowDownRight : ArrowRight;
+
   return (
-    <div className="card listing-card fade-in" onClick={onClick} style={{animationDelay:`${animDelay}s`}}>
-      <div style={{overflow:'hidden',height:180}}>
+    <div className="card listing-card fade-in" onClick={onClick} style={{ animationDelay: `${animDelay}s` }}>
+      <div style={{ overflow: 'hidden', height: 180 }}>
         {listing.images?.[0]
-          ?<img src={listing.images[0]} alt={listing.title} className="listing-img"/>
-          :<div style={{width:'100%',height:180,background:'var(--bg3)',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text3)'}}><Home size={32}/></div>
+          ? <img src={getImageUrl(listing.images[0])} alt={listing.title} className="listing-img" />
+          : <div style={{ width: '100%', height: 180, background: 'var(--bg3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)' }}><Home size={32} /></div>
         }
       </div>
-      <div className="listing-badge"><span className={getBadgeClass(listing.status)}><StatusIcon size={11}/> {listing.badge}</span></div>
-      <button className="listing-fav" onClick={e=>{e.stopPropagation();toggleFavorite(listing.id);}}>
-        {isFav?<Heart size={15} fill="red" color="red"/>:<Heart size={15}/>}
+      <div className="listing-badge"><span className={getBadgeClass(listing.status)}><StatusIcon size={11} /> {listing.badge || (listing.status === 'underpriced' ? 'Arzon' : listing.status === 'overpriced' ? 'Qimmat' : 'Bozor narxi')}</span></div>
+      <button className="listing-fav" onClick={e => { e.stopPropagation(); toggleFavorite(listingId); }}>
+        {isFav ? <Heart size={15} fill="red" color="red" /> : <Heart size={15} />}
       </button>
       <div className="listing-body">
         <div className="listing-price">{fmtPrice(listing.price)}</div>
         <div className="listing-title">{listing.title}</div>
-        <div className="listing-loc"><MapPin size={11}/> {listing.district}, {listing.city}</div>
+        <div className="listing-loc"><MapPin size={11} /> {listing.district}, {listing.city}</div>
         <div className="listing-meta">
-          <span style={{display:'flex',alignItems:'center',gap:3}}><Bed size={11}/> {listing.rooms}</span>
-          <span style={{display:'flex',alignItems:'center',gap:3}}><Maximize2 size={11}/> {listing.size} m²</span>
-          <span style={{display:'flex',alignItems:'center',gap:3}}><Building2 size={11}/> {listing.floor}/{listing.totalFloors}</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Bed size={11} /> {listing.rooms}</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Maximize2 size={11} /> {listing.size} m²</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}><Building2 size={11} /> {listing.floor}/{listing.totalFloors}</span>
         </div>
-        <div className={getBarClass(listing.status)} style={{width:listing.status==='underpriced'?'70%':listing.status==='overpriced'?'90%':'75%'}}/>
+        <div className={getBarClass(listing.status)} style={{ width: listing.status === 'underpriced' ? '70%' : listing.status === 'overpriced' ? '90%' : '75%' }} />
       </div>
     </div>
   );
@@ -918,24 +1017,27 @@ function ListingCard({ listing, onClick, animDelay=0 }) {
 // VALUATION MODAL
 // ═══════════════════════════════════════════════════════════════
 function ValuationModal({ onClose }) {
+  const { user, regions } = useApp();
   const [step, setStep] = useState(1);
-  const [form, setForm] = useState({city:'Tashkent',district:'Mirabad',rooms:2,size:'',floor:'',condition:'Yaxshi',type:'Kvartira'});
+  const [form, setForm] = useState({ city: 'Tashkent', district: 'Mirabad', rooms: 2, size: '', floor: '', condition: 'Yaxshi', type: 'Kvartira' });
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
-  const districts = {Tashkent:['Mirabad','Yunusabad','Chilanzar','Mirzo Ulugbek','Yakkasaray','Sergeli'],Samarkand:['Markaz',"Kattaqo'rg'on",'Urgut'],Bukhara:['Markaz','Kogon'],Namangan:['Markaz','Chortoq'],Fergana:['Markaz','Quvasoy']};
-  const region = ALL_REGIONS.find(r=>r.city===form.city)||ALL_REGIONS[0];
-  const calculate = () => {
-    setLoading(true);
-    setTimeout(()=>{
-      const base=region.price;
-      const cM=form.condition==='Yangi'?1.15:form.condition==='Yaxshi'?1.0:0.85;
-      const fM=parseInt(form.floor)>10?1.08:parseInt(form.floor)===1?0.93:1.0;
-      const rM=form.rooms<=1?0.95:form.rooms>=4?1.05:1.0;
-      const estPerM2=Math.round(base*cM*fM*rM);
-      setResult({estPerM2,totalEst:estPerM2*parseInt(form.size||80),marketAvg:base,diff:Math.round((estPerM2/base-1)*100),region});
-      setLoading(false);setStep(3);
-    },1500);
+  const [error, setError] = useState('');
+
+  const districts = { Tashkent: ['Mirabad', 'Yunusabad', 'Chilanzar', 'Mirzo Ulugbek', 'Yakkasaray', 'Sergeli'], Samarkand: ['Markaz', "Kattaqo'rg'on", 'Urgut'], Bukhara: ['Markaz', 'Kogon'], Namangan: ['Markaz', 'Chortoq'], Fergana: ['Markaz', 'Quvasoy'] };
+
+  const calculate = async () => {
+    if (!user) { setError("Iltimos, avval tizimga kiring"); return; }
+    if (!form.size) { setError("Maydonni kiriting"); return; }
+    try {
+      setLoading(true); setError('');
+      const data = await api.getValuation({ ...form, size: parseInt(form.size), floor: parseInt(form.floor) || 1, rooms: parseInt(form.rooms) || form.rooms });
+      setResult(data); setStep(3);
+    } catch (err) {
+      setError(err.message || "Baholashda xato yuz berdi");
+    } finally { setLoading(false); }
   };
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={e=>e.stopPropagation()}>
@@ -950,7 +1052,7 @@ function ValuationModal({ onClose }) {
         {step===1&&(
           <div className="fade-in">
             <h3 style={{fontWeight:700,marginBottom:16,color:'var(--text)'}}>Joylashuv</h3>
-            <div style={{marginBottom:14}}><label className="label">Shahar</label><select className="select" value={form.city} onChange={e=>setForm(f=>({...f,city:e.target.value,district:'Markaz'}))}>{ALL_REGIONS.map(r=><option key={r.city}>{r.city}</option>)}</select></div>
+            <div style={{marginBottom:14}}><label className="label">Shahar</label><select className="select" value={form.city} onChange={e=>setForm(f=>({...f,city:e.target.value,district:'Markaz'}))}>{regions.map(r=><option key={r.city}>{r.city}</option>)}</select></div>
             <div style={{marginBottom:14}}><label className="label">Tuman</label><select className="select" value={form.district} onChange={e=>setForm(f=>({...f,district:e.target.value}))}>{(districts[form.city]||['Markaz']).map(d=><option key={d}>{d}</option>)}</select></div>
             <div style={{marginBottom:20}}>
               <label className="label">Mulk turi</label>
@@ -1020,9 +1122,27 @@ function ValuationModal({ onClose }) {
 // ADVISOR MODAL
 // ═══════════════════════════════════════════════════════════════
 function AdvisorModal({ onClose }) {
-  const bestDeals = mockListings.filter(l=>l.status==='underpriced').sort((a,b)=>a.price-b.price).slice(0,4);
-  const cheapestR = [...ALL_REGIONS].sort((a,b)=>a.price-b.price)[0];
-  const bestR = [...ALL_REGIONS].sort((a,b)=>b.score-a.score)[0];
+  const { listings, regions, getImageUrl, stats } = useApp();
+  const bestDeals = listings.filter(l => l.status === 'underpriced').sort((a, b) => a.price - b.price).slice(0, 4);
+  const cheapestR = [...regions].sort((a, b) => {
+    const pA = parseInt(a.pricePerM2?.replace(/[^0-9]/g, '') || 0);
+    const pB = parseInt(b.pricePerM2?.replace(/[^0-9]/g, '') || 0);
+    return pA - pB;
+  })[0] || { city: 'N/A', pricePerM2: 'N/A' };
+  const bestR = [...regions].sort((a, b) => (b.score || 0) - (a.score || 0))[0] || { city: 'N/A', score: 0 };
+
+  // O'rtacha narx/m² — haqiqiy ma'lumotdan
+  const avgM2Display = stats.avgPriceM2 > 0 ? `$${stats.avgPriceM2.toLocaleString()}/m²` : 'N/A';
+  // Eng qimmat tuman — Toshkentdagi eng yuqori narxli district
+  const tashListings = listings.filter(l => l.city === 'Tashkent' && l.size > 0);
+  const districtAvg = {};
+  tashListings.forEach(l => {
+    if (!districtAvg[l.district]) districtAvg[l.district] = { sum: 0, count: 0 };
+    districtAvg[l.district].sum += l.price / l.size;
+    districtAvg[l.district].count += 1;
+  });
+  const topDistrict = Object.entries(districtAvg).sort((a, b) => (b[1].sum/b[1].count) - (a[1].sum/a[1].count))[0]?.[0] || 'Mirabad';
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal modal-lg" onClick={e=>e.stopPropagation()} style={{maxWidth:720}}>
@@ -1037,10 +1157,10 @@ function AdvisorModal({ onClose }) {
           <div style={{fontWeight:700,fontSize:15,marginBottom:12}}>Tavsiya</div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
             {[
-              {label:'Eng arzon viloyat',value:cheapestR.city,sub:cheapestR.pricePerM2},
-              {label:'Eng yuqori potentsial',value:bestR.city,sub:`Ball: ${bestR.score}/100`},
-              {label:"Toshkent o'rtacha",value:'$1,240/m²',sub:'Mirabad eng qimmat'},
-              {label:"Arzon e'lonlar",value:`${bestDeals.length} ta`,sub:'Hozir mavjud'},
+              {label:'Eng arzon viloyat', value:cheapestR.city, sub:cheapestR.pricePerM2},
+              {label:'Eng yuqori potentsial', value:bestR.city, sub:`Ball: ${bestR.score}/100`},
+              {label:"O'rtacha narx/m²", value:avgM2Display, sub:`${topDistrict} eng qimmat`},
+              {label:"Arzon e'lonlar", value:`${stats.underpricedCount} ta`, sub:'Hozir mavjud'},
             ].map((item,i)=>(
               <div key={i} style={{background:'rgba(255,255,255,0.15)',borderRadius:8,padding:12}}>
                 <div style={{fontSize:11,opacity:0.8,marginBottom:4}}>{item.label}</div>
@@ -1054,8 +1174,8 @@ function AdvisorModal({ onClose }) {
           <div style={{fontWeight:700,fontSize:14,marginBottom:12,color:'var(--text)',display:'flex',alignItems:'center',gap:6}}><TrendingUp size={16} color="#10B981"/> Eng yaxshi narxdagi mulklar</div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
             {bestDeals.map(l=>(
-              <div key={l.id} style={{background:'var(--bg3)',borderRadius:10,padding:12,display:'flex',gap:10,alignItems:'center'}}>
-                <img src={l.images[0]} style={{width:52,height:52,borderRadius:8,objectFit:'cover',flexShrink:0}} alt={l.title}/>
+              <div key={l._id || l.id} style={{background:'var(--bg3)',borderRadius:10,padding:12,display:'flex',gap:10,alignItems:'center'}}>
+                <img src={getImageUrl(l.images?.[0]) || 'https://via.placeholder.com/52'} style={{width:52,height:52,borderRadius:8,objectFit:'cover',flexShrink:0}} alt={l.title}/>
                 <div style={{minWidth:0}}>
                   <div style={{fontWeight:600,fontSize:13,color:'var(--text)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.title}</div>
                   <div style={{fontSize:12,color:'var(--text2)'}}>{l.district}</div>
@@ -1123,23 +1243,25 @@ function TourModal({ listing, onClose }) {
 // MARKET PULSE MODAL
 // ═══════════════════════════════════════════════════════════════
 function MarketPulseModal({ onClose }) {
+  const { regions } = useApp();
   const [activeCity, setActiveCity] = useState('Tashkent');
-  const cd = ALL_REGIONS.find(r=>r.city===activeCity)||ALL_REGIONS[0];
-  const months=['Yan','Fev','Mar','Apr','May','Iyu','Iyu','Avg','Sen','Okt','Noy','Dek'];
-  const history=[88,90,91,93,94,92,96,98,100,103,105,108].map(v=>Math.round(cd.price*v/100));
-  const maxV=Math.max(...history),minV=Math.min(...history);
+  const cd = regions.find(r => r.city === activeCity) || regions[0];
+  if (!cd) return null;
+  const months = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyu', 'Iyu', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek'];
+  const history = [88, 90, 91, 93, 94, 92, 96, 98, 100, 103, 105, 108].map(v => Math.round(cd.price * v / 100));
+  const maxV = Math.max(...history), minV = Math.min(...history);
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal modal-lg" onClick={e=>e.stopPropagation()} style={{maxWidth:720}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
-          <div style={{display:'flex',alignItems:'center',gap:10}}>
-            <div style={{width:40,height:40,background:'var(--primary)',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff'}}><BarChart3 size={20}/></div>
-            <div><div style={{fontFamily:'Sora,sans-serif',fontWeight:800,fontSize:18,color:'var(--text)'}}>Bozor Holati</div><div style={{fontSize:12,color:'var(--text2)'}}>Viloyatlar bo'yicha tahlil</div></div>
+      <div className="modal modal-lg" onClick={e => e.stopPropagation()} style={{ maxWidth: 720 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 40, height: 40, background: 'var(--primary)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}><BarChart3 size={20} /></div>
+            <div><div style={{ fontFamily: 'Sora,sans-serif', fontWeight: 800, fontSize: 18, color: 'var(--text)' }}>Bozor Holati</div><div style={{ fontSize: 12, color: 'var(--text2)' }}>Viloyatlar bo'yicha tahlil</div></div>
           </div>
-          <button className="nav-icon-btn" onClick={onClose}><X size={16}/></button>
+          <button className="nav-icon-btn" onClick={onClose}><X size={16} /></button>
         </div>
-        <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:20}}>
-          {ALL_REGIONS.map(r=><button key={r.city} onClick={()=>setActiveCity(r.city)} style={{padding:'5px 12px',border:`2px solid ${activeCity===r.city?r.color:'var(--border)'}`,borderRadius:20,background:activeCity===r.city?`${r.color}18`:'transparent',color:activeCity===r.city?r.color:'var(--text2)',fontWeight:600,cursor:'pointer',fontSize:12,transition:'all 0.2s'}}>{r.city}</button>)}
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 20 }}>
+          {regions.map(r => <button key={r.city} onClick={() => setActiveCity(r.city)} style={{ padding: '5px 12px', border: `2px solid ${activeCity === r.city ? r.color : 'var(--border)'}`, borderRadius: 20, background: activeCity === r.city ? `${r.color}18` : 'transparent', color: activeCity === r.city ? r.color : 'var(--text2)', fontWeight: 600, cursor: 'pointer', fontSize: 12, transition: 'all 0.2s' }}>{r.city}</button>)}
         </div>
         <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}}>
           {[['Narx/m²',cd.pricePerM2,cd.color],['Ball',`${cd.score}/100`,'#10B981'],["E'lonlar",`${cd.listings} ta`,'#2F81F7'],["O'rtacha xona",`${cd.avgRooms}`,'#F59E0B']].map(([k,v,c])=>(
@@ -1154,7 +1276,7 @@ function MarketPulseModal({ onClose }) {
           <div style={{display:'flex',alignItems:'flex-end',gap:3,height:90}}>
             {history.map((v,i)=>{
               const h=Math.round(((v-minV)/(maxV-minV||1))*75+15);
-              return <div key={i} style={{flex:1,height:`${h}px`,background:i===11?cd.color:'var(--border)',borderRadius:'4px 4px 0 0',transition:'all 0.3s',cursor:'pointer',position:'relative'}}
+              return <div key={i} style={{flex:1,height:`${h}px`,background:i===11?cd.color:'var(--border)',borderRadius:'4px 4px 0 0',transition:'all 0.3s',cursor:'pointer'}}
                 onMouseEnter={e=>e.currentTarget.style.background=cd.color}
                 onMouseLeave={e=>e.currentTarget.style.background=i===11?cd.color:'var(--border)'}/>;
             })}
@@ -1183,17 +1305,18 @@ function MarketPulseModal({ onClose }) {
 // PDF MODAL
 // ═══════════════════════════════════════════════════════════════
 function PdfModal({ items, onClose }) {
+  const { getImageUrl } = useApp();
   const [generating, setGenerating] = useState(false);
   const [done, setDone] = useState(false);
   const handleDownload = () => {
     setGenerating(true);
     setTimeout(()=>{
-      const content = ['UyNarx — Mulk Taqqoslash Hisoboti','='.repeat(40),`Sana: ${new Date().toLocaleDateString('uz-UZ')}`,'',
-        ...items.map(item=>[`${item.title}`,`  Manzil: ${item.address}`,`  Narx: $${item.price.toLocaleString()} ($${item.pricePerM2}/m²)`,`  ${item.rooms} xona, ${item.size} m², ${item.floor}/${item.totalFloors} qavat`,`  Holat: ${item.badge}`,`  Taxminiy: $${item.estimatedValue.toLocaleString()}`,''].join('\n'))
+      const content = ['qulayUy — Mulk Taqqoslash Hisoboti','='.repeat(40),`Sana: ${new Date().toLocaleDateString('uz-UZ')}`,'',
+        ...items.map(item=>[`${item.title}`,`  Manzil: ${item.address}`,`  Narx: $${item.price.toLocaleString()} ($${item.pricePerM2}/m²)`,`  ${item.rooms} xona, ${item.size} m², ${item.floor}/${item.totalFloors} qavat`,`  Holat: ${item.badge}`,`  Taxminiy: $${(item.estimatedValue||item.price*1.05).toLocaleString()}`,''].join('\n'))
       ].join('\n');
       const blob=new Blob([content],{type:'text/plain;charset=utf-8'});
       const url=URL.createObjectURL(blob);
-      const a=document.createElement('a');a.href=url;a.download='uynarx-hisobot.txt';
+      const a=document.createElement('a');a.href=url;a.download='qulayuy-hisobot.txt';
       document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
       setGenerating(false);setDone(true);
     },2000);
@@ -1217,8 +1340,8 @@ function PdfModal({ items, onClose }) {
         ):(
           <>
             {items.map(item=>(
-              <div key={item.id} style={{display:'flex',gap:10,background:'var(--bg3)',borderRadius:10,padding:10,marginBottom:8,alignItems:'center'}}>
-                <img src={item.images[0]} style={{width:48,height:48,borderRadius:8,objectFit:'cover',flexShrink:0}} alt={item.title}/>
+              <div key={item._id || item.id} style={{display:'flex',gap:10,background:'var(--bg3)',borderRadius:10,padding:10,marginBottom:8,alignItems:'center'}}>
+                <img src={getImageUrl(item.images?.[0]) || 'https://via.placeholder.com/48'} style={{width:48,height:48,borderRadius:8,objectFit:'cover',flexShrink:0}} alt={item.title}/>
                 <div><div style={{fontWeight:600,fontSize:13,color:'var(--text)'}}>{item.title}</div><div style={{fontFamily:'Sora,sans-serif',fontWeight:800,fontSize:14,color:'var(--primary)'}}>{fmtPrice(item.price)}</div></div>
               </div>
             ))}
@@ -1236,6 +1359,7 @@ function PdfModal({ items, onClose }) {
 // DETAIL MODAL (compare page)
 // ═══════════════════════════════════════════════════════════════
 function ListingDetailModal({ listing, onClose, onTour }) {
+  const { getImageUrl } = useApp();
   if (!listing) return null;
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -1244,7 +1368,7 @@ function ListingDetailModal({ listing, onClose, onTour }) {
           <div><h2 style={{fontFamily:'Sora,sans-serif',fontWeight:800,fontSize:20,color:'var(--text)',marginBottom:4}}>{listing.title}</h2><p style={{fontSize:13,color:'var(--text2)',display:'flex',alignItems:'center',gap:4}}><MapPin size={12}/>{listing.address}</p></div>
           <button className="nav-icon-btn" onClick={onClose}><X size={16}/></button>
         </div>
-        <div style={{height:180,borderRadius:12,overflow:'hidden',marginBottom:14}}><img src={listing.images[0]} alt={listing.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/></div>
+        <div style={{height:180,borderRadius:12,overflow:'hidden',marginBottom:14}}><img src={getImageUrl(listing.images?.[0]) || 'https://via.placeholder.com/600x180'} alt={listing.title} style={{width:'100%',height:'100%',objectFit:'cover'}}/></div>
         <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10,marginBottom:14}}>
           {[[<DollarSign size={13}/>,'Narx',fmtPrice(listing.price)],[<Maximize2 size={13}/>,'Maydon',`${listing.size} m²`],[<Bed size={13}/>,'Xona',listing.rooms],[<Building2 size={13}/>,'Qavat',`${listing.floor}/${listing.totalFloors}`]].map(([icon,k,v])=>(
             <div key={k} style={{background:'var(--bg3)',borderRadius:10,padding:'10px 12px',textAlign:'center'}}>
@@ -1255,7 +1379,7 @@ function ListingDetailModal({ listing, onClose, onTour }) {
         </div>
         <p style={{fontSize:13,color:'var(--text2)',lineHeight:1.6,marginBottom:14}}>{listing.description}</p>
         <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:18}}>
-          {listing.amenities.map(a=><span key={a} style={{padding:'4px 10px',background:'var(--bg3)',borderRadius:20,fontSize:12,color:'var(--text)',display:'flex',alignItems:'center',gap:4}}><CheckCircle size={11}/>{a}</span>)}
+          {listing.amenities?.map(a=><span key={a} style={{padding:'4px 10px',background:'var(--bg3)',borderRadius:20,fontSize:12,color:'var(--text)',display:'flex',alignItems:'center',gap:4}}><CheckCircle size={11}/>{a}</span>)}
         </div>
         <div style={{display:'flex',gap:10}}>
           <button className="btn btn-outline" style={{flex:1,justifyContent:'center'}} onClick={onClose}><X size={14}/> Yopish</button>
@@ -1270,14 +1394,47 @@ function ListingDetailModal({ listing, onClose, onTour }) {
 // HOME PAGE
 // ═══════════════════════════════════════════════════════════════
 function HomePage({ setPage, setSelectedListing }) {
-  const { t } = useApp();
+  const { t, regions, listings, loading, stats } = useApp();
   const [search, setSearch] = useState('');
   const [propType, setPropType] = useState('');
   const [showAllRegions, setShowAllRegions] = useState(false);
   const [selectedRegion, setSelectedRegion] = useState(null);
   const [showValuation, setShowValuation] = useState(false);
   const [showAdvisor, setShowAdvisor] = useState(false);
-  const visibleRegions = showAllRegions ? ALL_REGIONS : ALL_REGIONS.slice(0,3);
+  const visibleRegions = showAllRegions ? regions : regions.slice(0, 3);
+  const featured = listings.slice(0, 4);
+
+  // ─── Dinamik hero chip matni ──────────────────────────────────
+  // E'lonlar soni haqiqiy sondan — 1000 dan ko'p bo'lsa "X,000+" formatida
+  const listingsChipText = stats.totalListings >= 1000
+    ? `${(Math.floor(stats.totalListings / 100) * 100).toLocaleString()}+ E'lonlar`
+    : `${stats.totalListings}+ E'lonlar`;
+
+  // ─── Dinamik stats bar ────────────────────────────────────────
+  const statsBar = [
+    [
+      stats.totalListings >= 1000
+        ? `${(Math.floor(stats.totalListings / 100) * 100).toLocaleString()}+`
+        : `${stats.totalListings}`,
+      "Faol e'lonlar",
+      'var(--primary)'
+    ],
+    [
+      `${stats.totalRegions}`,
+      'Viloyat',
+      'var(--tertiary)'
+    ],
+    [
+      stats.topScore > 0 ? `${stats.topScore}%` : '—',
+      'Aniqlik',
+      '#F59E0B'
+    ],
+    [
+      stats.avgPriceM2 > 0 ? `$${stats.avgPriceM2.toLocaleString()}` : '—',
+      "O'rtacha m²",
+      '#2F81F7'
+    ],
+  ];
 
   return (
     <div className="page">
@@ -1313,14 +1470,11 @@ function HomePage({ setPage, setSelectedListing }) {
 
       {/* HERO */}
       <div className="hero">
-        {/* Floating chips */}
+        {/* ─── Dinamik hero chips ─── */}
         <div className="hero-chip hero-chip-1"><TrendingUp size={14} color="#10B981"/> <span>+4.2% o'sish</span></div>
-        <div className="hero-chip hero-chip-2"><Home size={14}/> <span>2,400+ E'lonlar</span></div>
-        <div className="hero-chip hero-chip-3"><MapPin size={14}/> <span>12 Viloyat</span></div>
-
-        {/* House animation */}
+        <div className="hero-chip hero-chip-2"><Home size={14}/> <span>{listingsChipText}</span></div>
+        <div className="hero-chip hero-chip-3"><MapPin size={14}/> <span>{stats.totalRegions} Viloyat</span></div>
         <HouseAnimation/>
-
         <div style={{position:'relative',zIndex:1,maxWidth:580,margin:'0 auto',padding:'0 20px'}}>
           <h1 className="hero-title">{t.home.hero_title}</h1>
           <p className="hero-sub">{t.home.hero_sub}</p>
@@ -1338,10 +1492,10 @@ function HomePage({ setPage, setSelectedListing }) {
         </div>
       </div>
 
-      {/* Stats bar */}
+      {/* ─── Dinamik Stats bar ─── */}
       <div style={{background:'var(--bg2)',borderBottom:'1px solid var(--border)',padding:'14px 24px'}}>
         <div style={{maxWidth:1200,margin:'0 auto',display:'flex',gap:0,justifyContent:'center'}}>
-          {[['2,400+', "Faol e'lonlar",'var(--primary)'],['12','Viloyat','var(--tertiary)'],['94%','Aniqlik','#F59E0B'],['$1,240',"O'rtacha m²",'#2F81F7']].map(([num,label,color],i)=>(
+          {statsBar.map(([num, label, color], i) => (
             <div key={i} className={`fade-in stagger-${i+1}`} style={{textAlign:'center',padding:'6px 32px',borderRight:i<3?'1px solid var(--border)':'none'}}>
               <div style={{fontFamily:'Sora,sans-serif',fontWeight:800,fontSize:20,color}}>{num}</div>
               <div style={{fontSize:12,color:'var(--text3)',marginTop:1}}>{label}</div>
@@ -1380,7 +1534,10 @@ function HomePage({ setPage, setSelectedListing }) {
               </div>
               <p style={{fontSize:11,color:'var(--text2)',fontStyle:'italic',marginBottom:8}}>"{m.note}"</p>
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                <span style={{fontSize:11,color:'var(--text3)'}}>{m.listings} ta e'lon</span>
+                {/* ─── Dinamik: har bir region uchun haqiqiy e'lonlar soni ─── */}
+                <span style={{fontSize:11,color:'var(--text3)'}}>
+                  {listings.filter(l => l.city?.toLowerCase() === m.city?.toLowerCase()).length || m.listings} ta e'lon
+                </span>
                 <button className="btn-ghost" style={{fontSize:11,padding:'3px 8px'}}>{t.home.region_analysis} <ChevronRight size={11}/></button>
               </div>
             </div>
@@ -1388,22 +1545,34 @@ function HomePage({ setPage, setSelectedListing }) {
         </div>
         <div style={{textAlign:'center',marginBottom:40}}>
           <button className="btn btn-secondary" onClick={()=>setShowAllRegions(!showAllRegions)}>
-            {showAllRegions?<><ChevronUp size={15}/>{t.home.hide_regions}</>:<><ChevronDown size={15}/>{t.home.show_all_regions} ({ALL_REGIONS.length})</>}
+            {showAllRegions ? <><ChevronUp size={15}/>{t.home.hide_regions}</> : <><ChevronDown size={15}/>{t.home.show_all_regions} ({regions.length})</>}
           </button>
         </div>
 
         {/* Featured */}
         <h2 className="section-title fade-in" style={{fontSize:22,marginBottom:20}}>{t.home.featured}</h2>
         <div className="grid-4" style={{marginBottom:40}}>
-          {mockListings.slice(0,4).map((l,i)=><ListingCard key={l.id} listing={l} animDelay={i*0.08} onClick={()=>{setSelectedListing(l.id);setPage('listing');}}/>)}
+          {loading ? (
+            [1,2,3,4].map(i=><div key={i} className="card shimmer" style={{height:280}}/>)
+          ) : (
+            featured.map((l,i)=><ListingCard key={l._id||l.id} listing={l} animDelay={i*0.08} onClick={()=>{setSelectedListing(l._id||l.id);setPage('listing');}}/>)
+          )}
         </div>
 
-        {/* Feature cards — uy ikonalari bilan */}
+        {/* Feature cards */}
         <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:20,marginBottom:40}}>
           {[
-            {icon:<Home size={24}/>,title:"Ko'p E'lonlar",desc:"18+ viloyat va tumanlarda yuz minglab mulklar",color:'var(--primary)',delay:0},
-            {icon:<TrendingUp size={24}/>,title:"Narx Tahlili",desc:"12 ta viloyat bo'yicha real vaqt bozor ma'lumoti",color:'var(--tertiary)',delay:0.1},
-            {icon:<MapPin size={24}/>,title:"Joylashuv",desc:"Har bir mulk uchun aniq manzil va tuman ma'lumoti",color:'#2F81F7',delay:0.2},
+            {icon:<Home size={24}/>, title:"Ko'p E'lonlar",
+              // ─── Dinamik: haqiqiy shaharlar va e'lonlar soni ───
+              desc:`${stats.totalRegions}+ viloyat va tumanlarda ${stats.totalListings}+ mulk`,
+              color:'var(--primary)',delay:0},
+            {icon:<TrendingUp size={24}/>, title:"Narx Tahlili",
+              desc:`${stats.totalRegions} ta viloyat bo'yicha real vaqt bozor ma'lumoti`,
+              color:'var(--tertiary)',delay:0.1},
+            {icon:<MapPin size={24}/>, title:"Joylashuv",
+              // ─── Dinamik: arzon e'lonlar soni ───
+              desc:`${stats.underpricedCount} ta arzon mulk mavjud. Aniq manzil va tuman ma'lumoti`,
+              color:'#2F81F7',delay:0.2},
           ].map((item,i)=>(
             <div key={i} className="card card-hover fade-in" style={{padding:24,animationDelay:`${item.delay}s`,borderTop:`3px solid ${item.color}`}}>
               <div style={{width:48,height:48,borderRadius:12,background:`${item.color}18`,display:'flex',alignItems:'center',justifyContent:'center',color:item.color,marginBottom:14,animation:`float ${3+i}s ease-in-out infinite`}}>{item.icon}</div>
@@ -1438,41 +1607,35 @@ function HomePage({ setPage, setSelectedListing }) {
 // LISTINGS PAGE
 // ═══════════════════════════════════════════════════════════════
 function ListingsPage({ setPage, setSelectedListing }) {
-  const { t, publishedListings } = useApp();
-  const allListings = [...publishedListings,...mockListings];
-  const [filters, setFilters] = useState({district:[],rooms:null,minPrice:'',maxPrice:'',sort:'price_asc',status:'',city:''});
+  const { t, listings, loading } = useApp();
+  const [filters, setFilters] = useState({ district: [], rooms: null, minPrice: '', maxPrice: '', sort: 'newest', status: '', city: '' });
   const [currentPage, setCurrentPage] = useState(1);
-  const [smartApplied, setSmartApplied] = useState(false);
-  const [showInfo, setShowInfo] = useState(false);
   const perPage = 9;
-  const districts = ['Yunusabad','Mirzo Ulugbek','Chilanzar','Yakkasaray','Mirabad','Center-1','Sergeli','Almazar'];
-  const cities = [...new Set(allListings.map(l=>l.city))];
-  const toggleDistrict = d=>setFilters(f=>({...f,district:f.district.includes(d)?f.district.filter(x=>x!==d):[...f.district,d]}));
+  const districts = [...new Set(listings.map(l => l.district).filter(Boolean))];
+  const cities = [...new Set(listings.map(l => l.city).filter(Boolean))];
 
-  const handleSmartFilter = ()=>{
-    setFilters(f=>({...f,status:'underpriced',sort:'views_desc'}));
-    setSmartApplied(true);setShowInfo(true);setTimeout(()=>setShowInfo(false),3000);setCurrentPage(1);
-  };
-  const resetFilters = ()=>{ setFilters({district:[],rooms:null,minPrice:'',maxPrice:'',sort:'price_asc',status:'',city:''});setSmartApplied(false); };
+  const toggleDistrict = (d) => setFilters(f=>({...f,district:f.district.includes(d)?f.district.filter(x=>x!==d):[...f.district,d]}));
+  const resetFilters = () => setFilters({district:[],rooms:null,minPrice:'',maxPrice:'',sort:'newest',status:'',city:''});
 
-  let filtered=[...allListings];
-  if(filters.rooms) filtered=filtered.filter(l=>l.rooms===filters.rooms);
-  if(filters.minPrice) filtered=filtered.filter(l=>l.price>=parseInt(filters.minPrice));
-  if(filters.maxPrice) filtered=filtered.filter(l=>l.price<=parseInt(filters.maxPrice));
-  if(filters.district.length>0) filtered=filtered.filter(l=>filters.district.some(d=>l.district.toLowerCase().includes(d.toLowerCase())));
-  if(filters.status) filtered=filtered.filter(l=>l.status===filters.status);
-  if(filters.city) filtered=filtered.filter(l=>l.city===filters.city);
-  if(filters.sort==='price_asc') filtered.sort((a,b)=>a.price-b.price);
-  else if(filters.sort==='price_desc') filtered.sort((a,b)=>b.price-a.price);
-  else if(filters.sort==='views_desc') filtered.sort((a,b)=>b.views-a.views);
+  let filtered = [...listings];
+  if (filters.rooms) filtered = filtered.filter(l=>l.rooms===filters.rooms);
+  if (filters.minPrice) filtered = filtered.filter(l=>l.price>=parseInt(filters.minPrice));
+  if (filters.maxPrice) filtered = filtered.filter(l=>l.price<=parseInt(filters.maxPrice));
+  if (filters.district.length>0) filtered = filtered.filter(l=>filters.district.some(d=>l.district?.toLowerCase().includes(d.toLowerCase())));
+  if (filters.status) filtered = filtered.filter(l=>l.status===filters.status);
+  if (filters.city) filtered = filtered.filter(l=>l.city===filters.city);
 
-  const totalPages=Math.ceil(filtered.length/perPage);
-  const paged=filtered.slice((currentPage-1)*perPage,currentPage*perPage);
-  const activeCount=[filters.district.length>0,!!filters.rooms,!!filters.minPrice,!!filters.maxPrice,!!filters.status,!!filters.city].filter(Boolean).length;
+  if (filters.sort==='price_asc') filtered.sort((a,b)=>a.price-b.price);
+  else if (filters.sort==='price_desc') filtered.sort((a,b)=>b.price-a.price);
+  else if (filters.sort==='views_desc') filtered.sort((a,b)=>b.views-a.views);
+  else if (filters.sort==='newest') filtered.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+
+  const totalPages = Math.ceil(filtered.length/perPage);
+  const paged = filtered.slice((currentPage-1)*perPage, currentPage*perPage);
+  const activeCount = [filters.district.length>0,!!filters.rooms,!!filters.minPrice,!!filters.maxPrice,!!filters.status,!!filters.city].filter(Boolean).length;
 
   return (
     <div className="page">
-      {showInfo&&<div style={{position:'fixed',top:80,right:24,background:'var(--primary)',color:'#fff',padding:'12px 20px',borderRadius:10,fontWeight:600,fontSize:14,display:'flex',alignItems:'center',gap:8,zIndex:999,animation:'slideIn 0.3s ease'}}><TrendingUp size={16}/> Eng yaxshi takliflar saralandi!</div>}
       <div className="container" style={{padding:'32px 24px'}}>
         <div className="listings-layout">
           <aside className="filter-sidebar">
@@ -1481,7 +1644,6 @@ function ListingsPage({ setPage, setSelectedListing }) {
                 <h3 style={{fontWeight:700,display:'flex',alignItems:'center',gap:6,color:'var(--text)'}}><Filter size={15}/> {t.listings.filters}</h3>
                 {activeCount>0&&<button className="btn-ghost btn-sm" onClick={resetFilters} style={{fontSize:12,color:'#DC2626'}}><X size={12}/> Tozalash</button>}
               </div>
-              {smartApplied&&<div style={{marginBottom:10}}><span className="filter-tag"><TrendingUp size={11}/> Aqlli saralash</span></div>}
               <div style={{marginBottom:14}}><label className="label">Shahar</label><select className="select" value={filters.city} onChange={e=>{setFilters(f=>({...f,city:e.target.value}));setCurrentPage(1);}}><option value="">{t.listings.all}</option>{cities.map(c=><option key={c}>{c}</option>)}</select></div>
               <div style={{marginBottom:14}}><label className="label">{t.listings.price_range}</label><div style={{display:'flex',gap:6}}><input className="input" placeholder="Min $" value={filters.minPrice} onChange={e=>{setFilters(f=>({...f,minPrice:e.target.value}));setCurrentPage(1);}}/><input className="input" placeholder="Max $" value={filters.maxPrice} onChange={e=>{setFilters(f=>({...f,maxPrice:e.target.value}));setCurrentPage(1);}}/></div></div>
               <div style={{marginBottom:14}}>
@@ -1492,26 +1654,26 @@ function ListingsPage({ setPage, setSelectedListing }) {
                   ))}
                 </div>
               </div>
+              {/* ─── Dinamik: backenddan keladigan haqiqiy tumanlar ─── */}
               <div style={{marginBottom:14}}><label className="label">{t.listings.districts}</label><div style={{maxHeight:156,overflowY:'auto'}}>{districts.map(d=><label key={d} className="check-item"><input type="checkbox" checked={filters.district.includes(d)} onChange={()=>{toggleDistrict(d);setCurrentPage(1);}}/> {d}</label>)}</div></div>
               <div style={{marginBottom:14}}>
                 <label className="label">{t.listings.rooms}</label>
                 <div className="room-btns">{[null,1,2,3,'4+'].map((r,i)=><button key={i} className={`room-btn ${filters.rooms===r?'active':''}`} onClick={()=>{setFilters(f=>({...f,rooms:r}));setCurrentPage(1);}}>{r===null?t.listings.all:r}</button>)}</div>
               </div>
-              <div style={{display:'flex',flexDirection:'column',gap:8}}>
-                <button className="btn btn-primary" style={{width:'100%',justifyContent:'center'}} onClick={handleSmartFilter}><TrendingUp size={14}/> {t.listings.smart_filter}</button>
-                <button className="btn btn-secondary" style={{width:'100%',justifyContent:'center'}} onClick={()=>setCurrentPage(1)}><Filter size={14}/> {t.listings.apply_filters}</button>
-              </div>
+              <button className="btn btn-secondary" style={{width:'100%',justifyContent:'center'}} onClick={()=>setCurrentPage(1)}><Filter size={14}/> {t.listings.apply_filters}</button>
             </div>
           </aside>
           <div className="listings-main">
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
               <div>
                 <h1 className="section-title">{t.listings.title}</h1>
-                <p style={{fontSize:14,color:'var(--text2)',marginTop:4}}>{filtered.length} {t.listings.properties_found}{smartApplied&&<span style={{marginLeft:8,fontSize:12,color:'var(--primary)',fontWeight:600}}>• Aqlli saralash faol</span>}</p>
+                {/* ─── Dinamik: filterlangan va jami sonlar ─── */}
+                <p style={{fontSize:14,color:'var(--text2)',marginTop:4}}>{filtered.length} {t.listings.properties_found} ({listings.length} jami)</p>
               </div>
               <div style={{display:'flex',alignItems:'center',gap:8}}>
                 <span style={{fontSize:13,color:'var(--text2)'}}>{t.listings.sort_by}:</span>
                 <select className="select" style={{width:'auto'}} value={filters.sort} onChange={e=>{setFilters(f=>({...f,sort:e.target.value}));setCurrentPage(1);}}>
+                  <option value="newest">Yangi</option>
                   <option value="price_asc">{t.listings.price_low}</option>
                   <option value="price_desc">{t.listings.price_high}</option>
                   <option value="views_desc">Ko'p ko'rilgan</option>
@@ -1520,7 +1682,7 @@ function ListingsPage({ setPage, setSelectedListing }) {
             </div>
             {paged.length===0
               ?<div style={{textAlign:'center',padding:60,color:'var(--text3)'}}><Home size={40} className="float-anim" style={{margin:'0 auto 12px',display:'block',opacity:0.3}}/><p>{t.listings.no_results}</p><button className="btn btn-secondary" style={{marginTop:12}} onClick={resetFilters}>Filtrlarni tozalash</button></div>
-              :<div className="grid-3">{paged.map((l,i)=><ListingCard key={l.id} listing={l} animDelay={i*0.05} onClick={()=>{setSelectedListing(l.id);setPage('listing');}}/>)}</div>
+              :<div className="grid-3">{paged.map((l,i)=><ListingCard key={l._id||l.id} listing={l} animDelay={i*0.05} onClick={()=>{setSelectedListing(l._id||l.id);setPage('listing');}}/>)}</div>
             }
             {totalPages>1&&(
               <div className="pagination">
@@ -1542,32 +1704,60 @@ function ListingsPage({ setPage, setSelectedListing }) {
 // LISTING DETAIL PAGE
 // ═══════════════════════════════════════════════════════════════
 function ListingDetailPage({ listingId, setPage }) {
-  const { t, favorites, toggleFavorite, publishedListings } = useApp();
-  const allListings=[...publishedListings,...mockListings];
-  const listing=allListings.find(l=>l.id===listingId);
+  const { t, favorites, toggleFavorite, getImageUrl } = useApp();
+  const [listing, setListing] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [activeImg, setActiveImg] = useState(0);
   const [showTour, setShowTour] = useState(false);
 
-  if (!listing) return <div style={{textAlign:'center',padding:80,color:'var(--text3)'}}><Home size={36} style={{margin:'0 auto 12px',display:'block',opacity:0.3}}/><p>Mulk topilmadi</p><button className="btn btn-primary" style={{marginTop:12}} onClick={()=>setPage('listings')}>E'lonlarga qaytish</button></div>;
-  const isFav=favorites.includes(listing.id);
+  useEffect(() => {
+    const fetchListing = async () => {
+      try {
+        setLoading(true);
+        const data = await api.getListing(listingId);
+        setListing(data);
+      } catch (err) {
+        console.error("Fetch listing error", err);
+      } finally { setLoading(false); }
+    };
+    fetchListing();
+  }, [listingId]);
+
+  if (loading) return (
+    <div style={{padding:80,textAlign:'center'}}>
+      <RefreshCw size={36} className="spin" style={{margin:'0 auto 12px',display:'block',opacity:0.3}}/><p>Yuklanmoqda...</p>
+    </div>
+  );
+
+  if (!listing) return (
+    <div style={{textAlign:'center',padding:80,color:'var(--text3)'}}>
+      <Home size={36} style={{margin:'0 auto 12px',display:'block',opacity:0.3}}/><p>Mulk topilmadi</p>
+      <button className="btn btn-primary" style={{marginTop:12}} onClick={()=>setPage('listings')}>E'lonlarga qaytish</button>
+    </div>
+  );
+
+  const isFav = favorites.includes(listing._id || listing.id);
+  // ─── Dinamik: m² narxini haqiqiy ma'lumotdan hisoblash ───
+  const pricePerM2Calc = listing.size > 0 ? Math.round(listing.price / listing.size) : 0;
+  const estimatedVal = listing.estimatedValue || Math.round(listing.price * 1.05);
 
   return (
     <div className="page">
-      {showTour&&<TourModal listing={listing} onClose={()=>setShowTour(false)}/>}
+      {showTour && <TourModal listing={listing} onClose={()=>setShowTour(false)}/>}
       <div className="container" style={{padding:'32px 24px'}}>
         <button className="btn btn-outline btn-sm fade-in" style={{marginBottom:20}} onClick={()=>setPage('listings')}><ChevronLeft size={14}/> {t.listing_detail.back}</button>
         <div style={{position:'relative',height:360,borderRadius:12,overflow:'hidden',background:'var(--bg3)',marginBottom:12,animation:'fadeIn 0.4s ease'}}>
-          <img src={listing.images[activeImg]||listing.images[0]} alt={listing.title} style={{width:'100%',height:'100%',objectFit:'cover',transition:'opacity 0.3s'}}/>
-          <span className={getBadgeClass(listing.status)} style={{position:'absolute',top:14,left:14,padding:'6px 12px',fontSize:12}}>{listing.badge}</span>
+          <img src={getImageUrl(listing.images?.[activeImg]) || getImageUrl(listing.images?.[0]) || 'https://via.placeholder.com/600x400?text=No+Image'} alt={listing.title} style={{width:'100%',height:'100%',objectFit:'cover',transition:'opacity 0.3s'}}/>
+          <span className={getBadgeClass(listing.status)} style={{position:'absolute',top:14,left:14,padding:'6px 12px',fontSize:12}}>{listing.badge||(listing.status==='underpriced'?'Arzon':listing.status==='overpriced'?'Qimmat':'Bozor narxi')}</span>
         </div>
-        {listing.images.length>1&&<div className="gallery-thumb">{listing.images.map((img,i)=><img key={i} src={img} alt="" className={activeImg===i?'active':''} onClick={()=>setActiveImg(i)}/>)}</div>}
+        {listing.images?.length>1&&<div className="gallery-thumb">{listing.images.map((img,i)=><img key={i} src={getImageUrl(img)} alt="" className={activeImg===i?'active':''} onClick={()=>setActiveImg(i)}/>)}</div>}
 
         <div style={{display:'grid',gridTemplateColumns:'1fr 300px',gap:28,marginTop:20}}>
           <div>
             <h1 className="fade-in" style={{fontFamily:'Sora,sans-serif',fontSize:28,fontWeight:800,marginBottom:4,color:'var(--text)'}}>{listing.title}</h1>
             <p style={{color:'var(--text2)',marginBottom:16,display:'flex',alignItems:'center',gap:4}}><MapPin size={14}/> {listing.address}</p>
             <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:24}}>
-              {[[<DollarSign size={13}/>,'Narx',fmtPrice(listing.price)],[<Maximize2 size={13}/>,'Maydon',`${listing.size} m²`],[<Bed size={13}/>,'Xona',listing.rooms],[<Building2 size={13}/>,'Qavat',`${listing.floor}/${listing.totalFloors}`]].map(([icon,k,v],i)=>(
+              {[[<DollarSign size={13}/>, 'Narx', fmtPrice(listing.price)],[<Maximize2 size={13}/>, 'Maydon', `${listing.size} m²`],[<Bed size={13}/>, 'Xona', listing.rooms],[<Building2 size={13}/>, 'Qavat', `${listing.floor}/${listing.totalFloors}`]].map(([icon,k,v],i)=>(
                 <div key={k} className={`fade-in stagger-${i+1}`} style={{background:'var(--bg3)',borderRadius:10,padding:'12px 14px'}}>
                   <div style={{fontSize:12,color:'var(--text3)',display:'flex',alignItems:'center',gap:4}}>{icon} {k}</div>
                   <div style={{fontWeight:700,fontSize:18,marginTop:2,color:'var(--text)'}}>{v}</div>
@@ -1585,12 +1775,20 @@ function ListingDetailPage({ listingId, setPage }) {
                 </div>
                 <div style={{marginLeft:'auto',textAlign:'right'}}>
                   <div style={{fontSize:12,color:'var(--text3)'}}>{t.listing_detail.estimated}</div>
-                  <div style={{fontFamily:'Sora,sans-serif',fontWeight:800,fontSize:20,color:'var(--primary)'}}>{fmtPrice(listing.estimatedValue)}</div>
+                  {/* ─── Dinamik: taxminiy qiymat ─── */}
+                  <div style={{fontFamily:'Sora,sans-serif',fontWeight:800,fontSize:20,color:'var(--primary)'}}>{fmtPrice(estimatedVal)}</div>
                 </div>
               </div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:12}}>
-                <div style={{background:'var(--bg3)',borderRadius:8,padding:'10px 12px'}}><div style={{fontSize:12,color:'var(--text3)'}}>{t.listing_detail.current_price}</div><div style={{fontWeight:700,color:'var(--text)'}}>${(listing.price/listing.size).toFixed(0)}/m²</div></div>
-                <div style={{background:'var(--bg3)',borderRadius:8,padding:'10px 12px'}}><div style={{fontSize:12,color:'var(--text3)'}}>{t.listing_detail.area_avg}</div><div style={{fontWeight:700,color:'var(--text)'}}>${Math.round(listing.pricePerM2*1.08)}/m²</div></div>
+                {/* ─── Dinamik: haqiqiy narx/m² ─── */}
+                <div style={{background:'var(--bg3)',borderRadius:8,padding:'10px 12px'}}>
+                  <div style={{fontSize:12,color:'var(--text3)'}}>{t.listing_detail.current_price}</div>
+                  <div style={{fontWeight:700,color:'var(--text)'}}>${pricePerM2Calc.toLocaleString()}/m²</div>
+                </div>
+                <div style={{background:'var(--bg3)',borderRadius:8,padding:'10px 12px'}}>
+                  <div style={{fontSize:12,color:'var(--text3)'}}>{t.listing_detail.area_avg}</div>
+                  <div style={{fontWeight:700,color:'var(--text)'}}>${Math.round(pricePerM2Calc*1.08).toLocaleString()}/m²</div>
+                </div>
               </div>
               <p style={{fontSize:13,color:'var(--text2)',fontStyle:'italic',borderTop:'1px solid var(--border)',paddingTop:10}}>
                 {listing.status==='underpriced'?"Bu mulk bozor o'rtachasidan past narxda — yaxshi investitsiya imkoniyati!":listing.status==='overpriced'?"Bu mulk bozor narxidan yuqori baholangan.":"Bu mulk bozor narxiga mos keladi."}
@@ -1601,32 +1799,36 @@ function ListingDetailPage({ listingId, setPage }) {
             <p style={{color:'var(--text2)',lineHeight:1.7,marginBottom:24}}>{listing.description}</p>
             <h2 style={{fontWeight:700,marginBottom:10,color:'var(--text)'}}>{t.listing_detail.amenities}</h2>
             <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
-              {listing.amenities.map(a=><span key={a} style={{padding:'6px 12px',background:'var(--bg3)',borderRadius:20,fontSize:13,display:'flex',alignItems:'center',gap:4,color:'var(--text)'}}><CheckCircle size={12}/> {a}</span>)}
+              {listing.amenities?.map(a=><span key={a} style={{padding:'6px 12px',background:'var(--bg3)',borderRadius:20,fontSize:13,display:'flex',alignItems:'center',gap:4,color:'var(--text)'}}><CheckCircle size={12}/> {a}</span>)}
             </div>
           </div>
 
           <div>
             <div className="card" style={{padding:20,position:'sticky',top:80}}>
               <div style={{fontFamily:'Sora,sans-serif',fontWeight:800,fontSize:24,marginBottom:4,color:'var(--text)'}}>{fmtPrice(listing.price)}</div>
-              <div style={{fontSize:13,color:'var(--text2)',marginBottom:16}}>${listing.pricePerM2}/m²</div>
+              {/* ─── Dinamik: narx/m² ─── */}
+              <div style={{fontSize:13,color:'var(--text2)',marginBottom:16}}>${(listing.pricePerM2||pricePerM2Calc).toLocaleString()}/m²</div>
               <button className="btn btn-primary" style={{width:'100%',marginBottom:8,justifyContent:'center'}} onClick={()=>setShowTour(true)}><Calendar size={15}/> Tur Buyurtma</button>
               <button className="btn btn-teal" style={{width:'100%',marginBottom:16,justifyContent:'center'}}><Phone size={15}/> {t.listing_detail.contact_seller}</button>
-              <button className="btn btn-outline" style={{width:'100%',justifyContent:'center'}} onClick={()=>toggleFavorite(listing.id)}>
+              <button className="btn btn-outline" style={{width:'100%',justifyContent:'center'}} onClick={()=>toggleFavorite(listing._id||listing.id)}>
                 {isFav?<><Heart size={15} fill="red" color="red"/> Saqlangan</>:<><Heart size={15}/> Saqlash</>}
               </button>
               <hr style={{margin:'16px 0',border:'none',borderTop:'1px solid var(--border)'}}/>
-              <div className="agent-card">
-                <div className="agent-avatar">{listing.agent.name.slice(0,2).toUpperCase()}</div>
-                <div>
-                  <div style={{fontWeight:600,fontSize:14,color:'var(--text)'}}>{listing.agent.name}</div>
-                  <div style={{fontSize:12,color:'var(--text2)'}}>{listing.agent.title}</div>
-                  <div className="stars">{'★'.repeat(Math.floor(listing.agent.rating))} <span style={{color:'var(--text3)',fontSize:11}}>{listing.agent.rating}</span></div>
+              {listing.agent && (
+                <div className="agent-card">
+                  <div className="agent-avatar">{listing.agent.name.slice(0,2).toUpperCase()}</div>
+                  <div>
+                    <div style={{fontWeight:600,fontSize:14,color:'var(--text)'}}>{listing.agent.name}</div>
+                    <div style={{fontSize:12,color:'var(--text2)'}}>{listing.agent.title}</div>
+                    <div className="stars">{'★'.repeat(Math.floor(listing.agent.rating))} <span style={{color:'var(--text3)',fontSize:11}}>{listing.agent.rating}</span></div>
+                  </div>
                 </div>
-              </div>
+              )}
+              {/* ─── Dinamik: views, favorites, inquiries ─── */}
               <div className="stats-row" style={{marginTop:12,justifyContent:'center'}}>
-                <span className="stat-item"><Eye size={12}/> {listing.views}</span>
-                <span className="stat-item"><Heart size={12}/> {listing.favorites}</span>
-                <span className="stat-item"><MessageCircle size={12}/> {listing.inquiries}</span>
+                <span className="stat-item"><Eye size={12}/> {(listing.views||0).toLocaleString()}</span>
+                <span className="stat-item"><Heart size={12}/> {(listing.favorites||0).toLocaleString()}</span>
+                <span className="stat-item"><MessageCircle size={12}/> {(listing.inquiries||0).toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -1641,19 +1843,26 @@ function ListingDetailPage({ listingId, setPage }) {
 // COMPARE PAGE
 // ═══════════════════════════════════════════════════════════════
 function ComparePage({ setPage, setSelectedListing }) {
-  const { t, lang } = useApp();
-  const items = mockListings.filter(l=>[1,2,4].includes(l.id));
-  const best = items[0];
+  const { t, lang, listings, regions, getImageUrl, stats } = useApp();
+  const items = listings.slice(0, 3);
+  const best = items[0] || {};
   const [tourListing, setTourListing] = useState(null);
   const [detailListing, setDetailListing] = useState(null);
   const [showMarket, setShowMarket] = useState(false);
   const [showPdf, setShowPdf] = useState(false);
+
   const aiTexts = {
     uz:["Mirabad kvartirasi bozordan 8.4% arzon. Investitsiya uchun eng yaxshi imkoniyat.","City Tower bozordan 7.2% qimmat. Prestij uchun ideal, lekin daromad uchun emas.","Mirzo Ulugbek studiyasi bozordan 8% arzon. Yangi bino, metro yaqin."],
     en:["Mirabad apartment 8.4% below market. Best investment opportunity.","City Tower 7.2% above market. Ideal for prestige, not yield.","Mirzo Ulugbek studio 8% below market. New building, near metro."],
     ru:["Квартира в Мирабаде на 8.4% ниже рынка. Лучшая инвестиция.","City Tower на 7.2% выше рынка. Для престижа, не для дохода.","Студия в Мирзо Улугбеке на 8% ниже рынка. Новостройка у метро."],
   };
   const aT = aiTexts[lang]||aiTexts.uz;
+
+  // ─── Dinamik: haqiqiy bozor o'sish foizi ───
+  const upTrendCount = regions.filter(r => r.trend === 'up').length;
+  const avgChange = regions.length > 0
+    ? (regions.reduce((s, r) => s + parseFloat(r.change?.replace('%','') || 0), 0) / regions.length).toFixed(1)
+    : 0;
 
   return (
     <div className="page">
@@ -1672,28 +1881,30 @@ function ComparePage({ setPage, setSelectedListing }) {
               <tr>
                 <th style={{width:160}}>{t.compare.features}</th>
                 {items.map(item=>(
-                  <th key={item.id} style={{textAlign:'center',position:'relative'}}>
-                    {item.id===best.id&&<div style={{position:'absolute',top:-12,left:'50%',transform:'translateX(-50%)',background:'var(--primary)',color:'#fff',fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:10,whiteSpace:'nowrap'}}>BEST VALUE</div>}
+                  <th key={item._id||item.id} style={{textAlign:'center',position:'relative'}}>
+                    {item._id===best._id&&<div style={{position:'absolute',top:-12,left:'50%',transform:'translateX(-50%)',background:'var(--primary)',color:'#fff',fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:10,whiteSpace:'nowrap'}}>BEST VALUE</div>}
                     <div style={{height:120,borderRadius:10,overflow:'hidden',margin:'8px 0',cursor:'pointer'}} onClick={()=>setDetailListing(item)}>
-                      <img src={item.images[0]} alt={item.title} style={{width:'100%',height:'100%',objectFit:'cover',transition:'transform 0.3s'}} onMouseEnter={e=>e.target.style.transform='scale(1.05)'} onMouseLeave={e=>e.target.style.transform='scale(1)'}/>
+                      <img src={getImageUrl(item.images?.[0])} alt={item.title} style={{width:'100%',height:'100%',objectFit:'cover',transition:'transform 0.3s'}} onMouseEnter={e=>e.target.style.transform='scale(1.05)'} onMouseLeave={e=>e.target.style.transform='scale(1)'}/>
                     </div>
                     <div style={{fontWeight:700,fontSize:13,color:'var(--text)'}}>{item.title}</div>
                     <div style={{fontSize:11,color:'var(--text3)'}}>{item.district}</div>
-                    <span className={getBadgeClass(item.status)} style={{marginTop:4,fontSize:10}}>{item.badge}</span>
+                    <span className={getBadgeClass(item.status)} style={{marginTop:4,fontSize:10}}>{item.badge||(item.status==='underpriced'?'Arzon':item.status==='overpriced'?'Qimmat':'Bozor narxi')}</span>
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              <tr><td style={{fontWeight:600,color:'var(--text2)',fontSize:13}}>{t.compare.total_price}</td>{items.map(i=><td key={i.id} style={{textAlign:'center',fontWeight:700,fontFamily:'Sora,sans-serif',color:'var(--text)'}}>{fmtPrice(i.price)}</td>)}</tr>
-              <tr><td style={{fontWeight:600,color:'var(--text2)',fontSize:13}}>{t.compare.price_m2}</td>{items.map(i=><td key={i.id} style={{textAlign:'center',fontWeight:600,color:i.id===best.id?'var(--tertiary)':'var(--text)'}}>${i.pricePerM2}/m²</td>)}</tr>
-              <tr><td style={{fontWeight:600,color:'var(--text2)',fontSize:13}}>{t.compare.specs}</td>{items.map(i=><td key={i.id} style={{textAlign:'center',fontSize:13,color:'var(--text)'}}>{i.rooms} xona • {i.size} m²<br/><span style={{color:'var(--text3)'}}>{i.floor}/{i.totalFloors} qavat</span></td>)}</tr>
-              <tr><td style={{fontWeight:600,color:'var(--text2)',fontSize:13}}>Taxminiy qiymat</td>{items.map(i=><td key={i.id} style={{textAlign:'center',fontFamily:'Sora,sans-serif',fontWeight:700,color:'var(--primary)'}}>{fmtPrice(i.estimatedValue)}</td>)}</tr>
-              <tr><td style={{fontWeight:600,color:'var(--text2)',fontSize:13}}>{t.compare.ai_explanation}</td>{items.map((item,i)=><td key={item.id} style={{fontSize:12,color:'var(--text2)',background:item.id===best.id?'rgba(16,185,129,0.06)':undefined,lineHeight:1.5}}>{aT[i]}</td>)}</tr>
+              <tr><td style={{fontWeight:600,color:'var(--text2)',fontSize:13}}>{t.compare.total_price}</td>{items.map(i=><td key={i._id||i.id} style={{textAlign:'center',fontWeight:700,fontFamily:'Sora,sans-serif',color:'var(--text)'}}>{fmtPrice(i.price)}</td>)}</tr>
+              {/* ─── Dinamik: har bir e'lon uchun haqiqiy narx/m² ─── */}
+              <tr><td style={{fontWeight:600,color:'var(--text2)',fontSize:13}}>{t.compare.price_m2}</td>{items.map(i=><td key={i._id||i.id} style={{textAlign:'center',fontWeight:600,color:i._id===best._id?'var(--tertiary)':'var(--text)'}}>${(i.pricePerM2||(i.size>0?Math.round(i.price/i.size):0)).toLocaleString()}/m²</td>)}</tr>
+              <tr><td style={{fontWeight:600,color:'var(--text2)',fontSize:13}}>{t.compare.specs}</td>{items.map(i=><td key={i._id||i.id} style={{textAlign:'center',fontSize:13,color:'var(--text)'}}>{i.rooms} xona • {i.size} m²<br/><span style={{color:'var(--text3)'}}>{i.floor}/{i.totalFloors} qavat</span></td>)}</tr>
+              {/* ─── Dinamik: taxminiy qiymat ─── */}
+              <tr><td style={{fontWeight:600,color:'var(--text2)',fontSize:13}}>Taxminiy qiymat</td>{items.map(i=><td key={i._id||i.id} style={{textAlign:'center',fontFamily:'Sora,sans-serif',fontWeight:700,color:'var(--primary)'}}>{fmtPrice(i.estimatedValue||Math.round(i.price*1.05))}</td>)}</tr>
+              <tr><td style={{fontWeight:600,color:'var(--text2)',fontSize:13}}>{t.compare.ai_explanation}</td>{items.map((item,i)=><td key={item._id||item.id} style={{fontSize:12,color:'var(--text2)',background:item._id===best._id?'rgba(16,185,129,0.06)':undefined,lineHeight:1.5}}>{aT[i]}</td>)}</tr>
               <tr>
                 <td/>
                 {items.map(item=>(
-                  <td key={item.id} style={{textAlign:'center',paddingTop:14,paddingBottom:14}}>
+                  <td key={item._id||item.id} style={{textAlign:'center',paddingTop:14,paddingBottom:14}}>
                     <div style={{display:'flex',flexDirection:'column',gap:6}}>
                       <button className="btn btn-primary btn-sm" style={{width:'100%',justifyContent:'center'}} onClick={()=>setTourListing(item)}><Calendar size={13}/> {t.compare.book_tour}</button>
                       <button className="btn btn-outline btn-sm" style={{width:'100%',justifyContent:'center'}} onClick={()=>setDetailListing(item)}><Eye size={13}/> {t.compare.view_details}</button>
@@ -1708,9 +1919,16 @@ function ComparePage({ setPage, setSelectedListing }) {
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20}}>
           <div className="card fade-in card-hover" style={{padding:20,cursor:'pointer'}} onClick={()=>setShowMarket(true)}>
             <h3 style={{fontWeight:700,marginBottom:8,display:'flex',alignItems:'center',gap:6,color:'var(--text)'}}><BarChart3 size={16} color="var(--primary)"/> {t.compare.market_pulse}</h3>
-            <p style={{fontSize:13,color:'var(--text2)',marginBottom:12}}>Yunusabaddagi mulk narxlari oxirgi chorakda 4.2% oshdi. <span style={{color:'var(--primary)',fontWeight:600}}>Batafsil →</span></p>
+            {/* ─── Dinamik: haqiqiy bozor o'sish ma'lumoti ─── */}
+            <p style={{fontSize:13,color:'var(--text2)',marginBottom:12}}>
+              {upTrendCount} ta viloyat o'sish tendensiyasida. O'rtacha o'sish: +{avgChange}%.{' '}
+              <span style={{color:'var(--primary)',fontWeight:600}}>Batafsil →</span>
+            </p>
             <div style={{display:'flex',gap:4,alignItems:'flex-end',height:64}}>
-              {[40,45,42,48,44,50,52,65].map((h,i)=><div key={i} style={{flex:1,height:`${h}px`,background:i===7?'var(--primary)':'var(--border)',borderRadius:4}}/>)}
+              {/* ─── Dinamik: regionlar scorelari bo'yicha bar ─── */}
+              {regions.slice(0,8).map((r,i)=>(
+                <div key={i} style={{flex:1,height:`${Math.round((r.score/100)*60)+8}px`,background:i===regions.slice(0,8).length-1?'var(--primary)':'var(--border)',borderRadius:4,transition:'height 0.3s'}}/>
+              ))}
             </div>
           </div>
           <div className="card fade-in card-hover" style={{padding:20}}>
@@ -1718,7 +1936,11 @@ function ComparePage({ setPage, setSelectedListing }) {
             <h3 style={{fontWeight:700,marginBottom:8,color:'var(--text)'}}>{t.compare.export}</h3>
             <p style={{fontSize:13,color:'var(--text2)',marginBottom:14}}>{t.compare.export_sub}</p>
             <div style={{background:'var(--bg3)',borderRadius:8,padding:10,marginBottom:14}}>
-              {['Narx taqqoslash','Bozor tahlili',"Qulayliklar ro'yxati"].map((item,i)=>(
+              {[
+                `Narx taqqoslash (${items.length} ta mulk)`,
+                `Bozor tahlili (${regions.length} viloyat)`,
+                "Qulayliklar ro'yxati"
+              ].map((item,i)=>(
                 <div key={i} style={{display:'flex',alignItems:'center',gap:6,fontSize:12,color:'var(--text2)',marginBottom:4}}>
                   <CheckCircle size={11} color="#10B981"/>{item}
                 </div>
@@ -1737,15 +1959,23 @@ function ComparePage({ setPage, setSelectedListing }) {
 // FAVORITES PAGE
 // ═══════════════════════════════════════════════════════════════
 function FavoritesPage({ setPage, setSelectedListing }) {
-  const { t, favorites, toggleFavorite } = useApp();
-  const favListings = mockListings.filter(l=>favorites.includes(l.id));
+  const { t, favorites, toggleFavorite, listings, getImageUrl } = useApp();
+  const favListings = listings.filter(l => favorites.includes(l._id || l.id));
   const [alertsOn, setAlertsOn] = useState(true);
+
+  // ─── Dinamik: sevimlilar narx o'zgarishi — eng arzon sevimli ───
+  const cheapestFav = favListings.length > 0
+    ? favListings.reduce((min, l) => l.price < min.price ? l : min, favListings[0])
+    : null;
+  const favCities = [...new Set(favListings.map(l => l.city))];
+
   return (
     <div className="page">
       <div className="container" style={{padding:'32px 24px'}}>
         <div className="fade-in" style={{marginBottom:24}}>
           <h1 className="section-title">{t.favorites.title}</h1>
-          <p className="section-sub">{t.favorites.sub}</p>
+          {/* ─── Dinamik: sevimlilar soni ─── */}
+          <p className="section-sub">{favListings.length > 0 ? `${favListings.length} ta saqlangan mulk` : t.favorites.sub}</p>
         </div>
         {favListings.length===0
           ?<div style={{textAlign:'center',padding:60,color:'var(--text3)'}}>
@@ -1754,14 +1984,14 @@ function FavoritesPage({ setPage, setSelectedListing }) {
             <button className="btn btn-primary" style={{marginTop:16}} onClick={()=>setPage('listings')}>E'lonlarga o'tish</button>
            </div>
           :<div className="grid-3" style={{marginBottom:28}}>
-            {favListings.map((l,i)=>(
-              <div key={l.id} className="card listing-card fade-in" style={{position:'relative',animationDelay:`${i*0.08}s`}}>
-                <button onClick={()=>toggleFavorite(l.id)} style={{position:'absolute',top:10,left:10,zIndex:2,width:28,height:28,background:'rgba(255,255,255,0.9)',border:'none',borderRadius:50,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'background 0.2s'}} onMouseEnter={e=>e.currentTarget.style.background='#FEE2E2'} onMouseLeave={e=>e.currentTarget.style.background='rgba(255,255,255,0.9)'}><Trash2 size={13}/></button>
-                <div style={{overflow:'hidden',height:160}}><img src={l.images[0]} alt={l.title} className="listing-img" style={{height:160}} onClick={()=>{setSelectedListing(l.id);setPage('listing');}}/></div>
-                <div className="listing-body" onClick={()=>{setSelectedListing(l.id);setPage('listing');}}>
-                  <div className="listing-price">{fmtPrice(l.price)}</div>
-                  <div className="listing-title">{l.title}</div>
-                  <div className="listing-loc"><MapPin size={11}/> {l.district}, {l.city}</div>
+            {favListings.map((listing, index) => (
+              <div key={listing._id || listing.id} className="card listing-card fade-in" style={{position:'relative',animationDelay:`${index*0.08}s`}}>
+                <button onClick={() => toggleFavorite(listing._id || listing.id)} style={{position:'absolute',top:10,left:10,zIndex:2,width:28,height:28,background:'rgba(255,255,255,0.9)',border:'none',borderRadius:50,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'background 0.2s'}} onMouseEnter={e=>e.currentTarget.style.background='#FEE2E2'} onMouseLeave={e=>e.currentTarget.style.background='rgba(255,255,255,0.9)'}><Trash2 size={13}/></button>
+                <div style={{overflow:'hidden',height:160}}><img src={getImageUrl(listing.images?.[0])} alt={listing.title} className="listing-img" style={{height:160}} onClick={()=>{setSelectedListing(listing._id||listing.id);setPage('listing');}}/></div>
+                <div className="listing-body" onClick={()=>{setSelectedListing(listing._id||listing.id);setPage('listing');}}>
+                  <div className="listing-price">{fmtPrice(listing.price)}</div>
+                  <div className="listing-title">{listing.title}</div>
+                  <div className="listing-loc"><MapPin size={11}/> {listing.district}, {listing.city}</div>
                 </div>
               </div>
             ))}
@@ -1771,7 +2001,12 @@ function FavoritesPage({ setPage, setSelectedListing }) {
           <div style={{background:'linear-gradient(135deg,var(--primary),var(--secondary))',borderRadius:12,padding:20,color:'#fff',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
             <div>
               <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}><TrendingUp size={20}/><span style={{fontWeight:700,fontSize:15}}>{t.favorites.market_intelligence}</span></div>
-              <p style={{fontSize:13,opacity:0.9}}>Sevimlilaringizga asoslanib, Mirabad mulklari kelgusi chorakda 4.2% oshishi kutilmoqda.</p>
+              {/* ─── Dinamik: sevimlilar asosida tavsiya ─── */}
+              <p style={{fontSize:13,opacity:0.9}}>
+                {favListings.length > 0
+                  ? `${favCities.join(', ')} mulklari kuzatilmoqda. ${cheapestFav ? `Eng arzon: ${fmtPrice(cheapestFav.price)}` : ''}`
+                  : "Sevimlilarga mulk qo'shing — bozor tahlilini ko'rasiz."}
+              </p>
             </div>
             <button className="btn" style={{background:'rgba(255,255,255,0.2)',color:'#fff',flexShrink:0,border:'1px solid rgba(255,255,255,0.3)'}}>{t.favorites.view_trends}</button>
           </div>
@@ -1794,12 +2029,20 @@ function FavoritesPage({ setPage, setSelectedListing }) {
 // PROFILE
 // ═══════════════════════════════════════════════════════════════
 function ProfilePage({ setPage }) {
-  const { t, user, logout, updateCurrentUser } = useApp();
+  const { t, user, logout, updateCurrentUser, listings, regions, favorites, stats } = useApp();
   const [activeTab, setActiveTab] = useState('overview');
   const [toast, setToast] = useState('');
   const [confirmModal, setConfirmModal] = useState(null);
-  const isAdmin = user?.role==='admin';
-  const showToast = msg=>setToast(msg);
+  const [allUsers, setAllUsers] = useState([]);
+  const isAdmin = user?.role === 'admin';
+
+  useEffect(() => {
+    if (isAdmin && activeTab === 'users') {
+      authApi.getAllUsers().then(data => setAllUsers(data.users || data)).catch(e => console.error(e));
+    }
+  }, [isAdmin, activeTab]);
+
+  const showToast = msg => setToast(msg);
 
   if (!user) return (
     <div className="page" style={{display:'flex',alignItems:'center',justifyContent:'center',padding:80}}>
@@ -1813,6 +2056,11 @@ function ProfilePage({ setPage }) {
   const tabs = isAdmin
     ?[{id:'overview',icon:<BarChart2 size={15}/>,label:"Dashboard"},{id:'listings',icon:<Home size={15}/>,label:"Barcha e'lonlar"},{id:'users',icon:<User size={15}/>,label:"Foydalanuvchilar"},{id:'settings',icon:<Settings size={15}/>,label:t.profile.account_settings},{id:'security',icon:<Shield size={15}/>,label:t.profile.security}]
     :[{id:'overview',icon:<BarChart2 size={15}/>,label:t.profile.overview},{id:'listings',icon:<Home size={15}/>,label:t.profile.my_listings},{id:'settings',icon:<Settings size={15}/>,label:t.profile.account_settings},{id:'security',icon:<Shield size={15}/>,label:t.profile.security}];
+
+  // ─── Dinamik: user statistikalari ───
+  const myListings = listings.filter(l => l.owner === user?._id || l.owner === user?.id);
+  const myTotalViews = myListings.reduce((sum, l) => sum + (l.views || 0), 0);
+  const myTotalInquiries = myListings.reduce((sum, l) => sum + (l.inquiries || 0), 0);
 
   return (
     <div className="page">
@@ -1829,7 +2077,7 @@ function ProfilePage({ setPage }) {
               {isAdmin&&<span className="admin-badge">👑 Admin</span>}
             </div>
             <p style={{color:'var(--text2)',fontSize:13}}>{user.email}</p>
-            <p style={{color:'var(--text3)',fontSize:12,marginTop:2}}>{t.profile.member_since}: {user.joinDate}</p>
+            <p style={{color:'var(--text3)',fontSize:12,marginTop:2}}>{t.profile.member_since}: {user.joinDate || new Date(user.createdAt || Date.now()).toLocaleDateString('uz-UZ')}</p>
           </div>
           <div style={{display:'flex',gap:8}}>
             {!isAdmin&&<button className="btn btn-primary btn-sm"><TrendingUp size={13}/> {t.profile.upgrade}</button>}
@@ -1845,8 +2093,8 @@ function ProfilePage({ setPage }) {
             </div>
             <div className="ai-box fade-in" style={{padding:16}}>
               <div style={{fontSize:11,fontWeight:700,opacity:0.7,marginBottom:4}}>{t.profile.credits}</div>
-              <div style={{fontFamily:'Sora,sans-serif',fontWeight:800,fontSize:28}}>{user.credits}<span style={{fontSize:14,opacity:0.7}}>/350</span></div>
-              <div className="progress-bar" style={{marginTop:8}}><div className="progress-fill" style={{width:`${Math.min(100,(user.credits/350)*100)}%`}}/></div>
+              <div style={{fontFamily:'Sora,sans-serif',fontWeight:800,fontSize:28}}>{user.credits||0}<span style={{fontSize:14,opacity:0.7}}>/350</span></div>
+              <div className="progress-bar" style={{marginTop:8}}><div className="progress-fill" style={{width:`${Math.min(100,((user.credits||0)/350)*100)}%`}}/></div>
             </div>
           </div>
 
@@ -1856,8 +2104,18 @@ function ProfilePage({ setPage }) {
                 <h2 style={{fontWeight:700,marginBottom:16,color:'var(--text)'}}>{isAdmin?'Dashboard':t.profile.overview}</h2>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,marginBottom:20}}>
                   {(isAdmin
-                    ?[[registeredUsers.length,"Foydalanuvchilar",<User size={20}/>,'var(--primary)'],[mockListings.length,"Jami e'lonlar",<Home size={20}/>,'#10B981'],[mockListings.filter(l=>l.status==='underpriced').length,'Arzon mulklar',<TrendingUp size={20}/>,'#F59E0B']]
-                    :[[2,"Faol e'lonlar",<Home size={20}/>,'var(--primary)'],[28,"Ko'rishlar",<Eye size={20}/>,'#10B981'],[user.credits,t.profile.credits,<DollarSign size={20}/>,'#F59E0B']]
+                    ? [
+                        // ─── Admin uchun dinamik sonlar ───
+                        [allUsers.length || '—', "Foydalanuvchilar", <Users size={20}/>, 'var(--primary)'],
+                        [listings.length, "Jami e'lonlar", <Home size={20}/>, '#10B981'],
+                        [stats.underpricedCount, 'Arzon mulklar', <TrendingUp size={20}/>, '#F59E0B'],
+                      ]
+                    : [
+                        // ─── User uchun dinamik sonlar ───
+                        [myListings.length, "Faol e'lonlar", <Home size={20}/>, 'var(--primary)'],
+                        [myTotalViews.toLocaleString(), "Ko'rishlar", <Eye size={20}/>, '#10B981'],
+                        [user?.credits || 0, t.profile.credits, <DollarSign size={20}/>, '#F59E0B'],
+                      ]
                   ).map(([num,label,icon,color],i)=>(
                     <div key={label} className={`stat-card fade-in stagger-${i+1}`} style={{borderTop:`3px solid ${color}`}}>
                       <div style={{color,marginBottom:8,animation:`float ${3+i}s ease-in-out infinite`}}>{icon}</div>
@@ -1866,9 +2124,35 @@ function ProfilePage({ setPage }) {
                     </div>
                   ))}
                 </div>
+
+                {/* ─── Dinamik: qo'shimcha statistikalar ─── */}
+                {isAdmin && (
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,marginBottom:20}}>
+                    {[
+                      [stats.totalViews.toLocaleString(), "Jami ko'rishlar", <Eye size={16}/>, '#8B5CF6'],
+                      [stats.avgPriceM2>0?`$${stats.avgPriceM2.toLocaleString()}`:'-', "O'rt. narx/m²", <DollarSign size={16}/>, '#06B6D4'],
+                      [regions.filter(r=>r.trend==='up').length, "O'sish viloyatlar", <TrendingUp size={16}/>, '#10B981'],
+                    ].map(([num,label,icon,color],i)=>(
+                      <div key={label} style={{background:'var(--bg3)',borderRadius:10,padding:'12px 14px',borderLeft:`3px solid ${color}`}}>
+                        <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:4,color,fontSize:12}}>{icon}{label}</div>
+                        <div style={{fontFamily:'Sora,sans-serif',fontWeight:800,fontSize:20,color:'var(--text)'}}>{num}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <div style={{background:'var(--bg3)',borderRadius:12,padding:20,border:'1px solid var(--border)'}}>
                   <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}><TrendingUp size={18} color="var(--primary)"/><span style={{fontWeight:700,fontSize:15,color:'var(--text)'}}>Tavsiya</span></div>
-                  {isAdmin?<p style={{fontSize:13,color:'var(--text2)'}}>Mirabad tumani so'nggi oyda +8.4% o'sish ko'rsatdi.</p>:<p style={{fontSize:13,color:'var(--text2)'}}>Sevimlilaringiz asosida Mirabad mulki keyingi chorakda 4.2% o'sishi kutilmoqda.</p>}
+                  {isAdmin
+                    ? <p style={{fontSize:13,color:'var(--text2)'}}>
+                        Jami {listings.length} ta e'lon, {stats.underpricedCount} tasi arzon. O'rtacha narx/m²: ${stats.avgPriceM2.toLocaleString()}.
+                      </p>
+                    : <p style={{fontSize:13,color:'var(--text2)'}}>
+                        {myListings.length > 0
+                          ? `Sizning ${myListings.length} ta e'loningiz ${myTotalViews} marta ko'rilgan.`
+                          : "Sevimlilaringiz asosida Mirabad mulki keyingi chorakda 4.2% o'sishi kutilmoqda."}
+                      </p>
+                  }
                 </div>
               </div>
             )}
@@ -1876,15 +2160,19 @@ function ProfilePage({ setPage }) {
             {activeTab==='listings'&&(
               <div className="fade-in">
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-                  <div><h2 style={{fontWeight:700,color:'var(--text)'}}>{isAdmin?"Barcha e'lonlar":t.profile.my_listings}</h2><p style={{fontSize:13,color:'var(--text2)'}}>{t.profile.manage}</p></div>
+                  <div>
+                    <h2 style={{fontWeight:700,color:'var(--text)'}}>{isAdmin?"Barcha e'lonlar":t.profile.my_listings}</h2>
+                    {/* ─── Dinamik: e'lonlar soni ─── */}
+                    <p style={{fontSize:13,color:'var(--text2)'}}>{isAdmin?`${listings.length} ta e'lon`:t.profile.manage}</p>
+                  </div>
                   {isAdmin&&<button className="btn btn-primary btn-sm" onClick={()=>setPage('add_listing')}><Plus size={14}/> {t.profile.new_listing}</button>}
                 </div>
                 <div className="grid-2">
-                  {(isAdmin?mockListings.slice(0,6):mockListings.slice(0,2)).map((l,i)=>(
-                    <div key={l.id} className={`card fade-in stagger-${Math.min(i+1,6)}`} style={{overflow:'hidden'}}>
+                  {(isAdmin ? listings : myListings).slice(0,6).map((l,i)=>(
+                    <div key={l._id||l.id} className={`card fade-in stagger-${Math.min(i+1,6)}`} style={{overflow:'hidden'}}>
                       <div style={{position:'relative',overflow:'hidden',height:140}}>
-                        <img src={l.images[0]} alt={l.title} style={{width:'100%',height:140,objectFit:'cover',transition:'transform 0.3s'}} onMouseEnter={e=>e.target.style.transform='scale(1.05)'} onMouseLeave={e=>e.target.style.transform='scale(1)'}/>
-                        <span className={getBadgeClass(l.status)} style={{position:'absolute',top:8,left:8}}>{l.badge}</span>
+                        <img src={getImageUrl(l.images?.[0])||'https://via.placeholder.com/200x140'} alt={l.title} style={{width:'100%',height:140,objectFit:'cover',transition:'transform 0.3s'}} onMouseEnter={e=>e.target.style.transform='scale(1.05)'} onMouseLeave={e=>e.target.style.transform='scale(1)'}/>
+                        <span className={getBadgeClass(l.status)} style={{position:'absolute',top:8,left:8}}>{l.badge||(l.status==='underpriced'?'Arzon':l.status==='overpriced'?'Qimmat':'Fair')}</span>
                       </div>
                       <div style={{padding:14}}>
                         <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
@@ -1892,10 +2180,11 @@ function ProfilePage({ setPage }) {
                           <span className="badge badge-under" style={{fontSize:9}}>Faol</span>
                         </div>
                         <p style={{fontSize:12,color:'var(--text2)',marginBottom:8}}>{l.district} • {l.rooms} xona • {l.size}m²</p>
+                        {/* ─── Dinamik: e'lon statistikalari ─── */}
                         <div className="stats-row" style={{marginBottom:10}}>
-                          <span className="stat-item"><Eye size={11}/> {l.views}</span>
-                          <span className="stat-item"><Heart size={11}/> {l.favorites}</span>
-                          <span className="stat-item"><MessageCircle size={11}/> {l.inquiries}</span>
+                          <span className="stat-item"><Eye size={11}/> {(l.views||0).toLocaleString()}</span>
+                          <span className="stat-item"><Heart size={11}/> {(l.favorites||0).toLocaleString()}</span>
+                          <span className="stat-item"><MessageCircle size={11}/> {(l.inquiries||0).toLocaleString()}</span>
                         </div>
                         <div style={{display:'flex',gap:6}}>
                           <button className="btn btn-secondary btn-sm" style={{flex:1,justifyContent:'center'}}>Tahrirlash</button>
@@ -1915,16 +2204,18 @@ function ProfilePage({ setPage }) {
 
             {activeTab==='users'&&isAdmin&&(
               <div className="fade-in">
-                <h2 style={{fontWeight:700,marginBottom:16,color:'var(--text)'}}>Foydalanuvchilar</h2>
-                {registeredUsers.map((u,i)=>(
-                  <div key={u.id} className={`settings-row fade-in stagger-${Math.min(i+1,6)}`} style={{marginBottom:8}}>
+                {/* ─── Dinamik: foydalanuvchilar soni ─── */}
+                <h2 style={{fontWeight:700,marginBottom:4,color:'var(--text)'}}>Foydalanuvchilar</h2>
+                <p style={{fontSize:13,color:'var(--text2)',marginBottom:16}}>{allUsers.length} ta ro'yxatdan o'tgan</p>
+                {allUsers.map((u,i)=>(
+                  <div key={u.id||u._id} className={`settings-row fade-in stagger-${Math.min(i+1,6)}`} style={{marginBottom:8}}>
                     <div style={{display:'flex',alignItems:'center',gap:10}}>
                       <div style={{width:38,height:38,borderRadius:'50%',background:u.role==='admin'?'#F59E0B':'var(--primary)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:700,fontSize:13}}>{u.name.slice(0,2).toUpperCase()}</div>
                       <div><div style={{fontWeight:600,fontSize:14,color:'var(--text)'}}>{u.name}</div><div style={{fontSize:12,color:'var(--text2)'}}>{u.email}</div></div>
                     </div>
                     <div style={{display:'flex',alignItems:'center',gap:8}}>
                       {u.role==='admin'&&<span className="admin-badge">Admin</span>}
-                      <span style={{fontSize:12,color:'var(--text3)'}}>{u.joinDate}</span>
+                      <span style={{fontSize:12,color:'var(--text3)'}}>{new Date(u.createdAt).toLocaleDateString()}</span>
                       {u.role!=='admin'&&<button className="btn btn-outline btn-sm" style={{fontSize:11,color:'#DC2626',borderColor:'#DC2626'}}>Bloklash</button>}
                     </div>
                   </div>
@@ -1948,14 +2239,14 @@ function SettingsTab({ user, updateCurrentUser, showToast }) {
   const [confirmPass, setConfirmPass] = useState('');
   const [passError, setPassError] = useState('');
   const fileRef = useRef(null);
-  const handleSave = ()=>{
+  const handleSave = () => {
     if(newPass&&newPass.length<6){setPassError("Parol kamida 6 belgi");return;}
     if(newPass&&newPass!==confirmPass){setPassError("Parollar mos emas");return;}
     setPassError('');
     const updates={phone};if(newPass) updates.password=newPass;
     updateCurrentUser(updates);setNewPass('');setConfirmPass('');showToast("Sozlamalar saqlandi!");
   };
-  const handlePhoto=e=>{
+  const handlePhoto = e => {
     const f=e.target.files[0];if(!f)return;
     const r=new FileReader();r.onload=ev=>{updateCurrentUser({avatar:ev.target.result});showToast("Rasm yangilandi!");};r.readAsDataURL(f);
   };
@@ -2014,7 +2305,8 @@ function SecurityTab({ user, logout, setPage, showToast, setConfirmModal }) {
       </div>
       <div className="settings-section">
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
-          <h3 style={{fontWeight:700,fontSize:15,color:'var(--text)'}}>Faol seanslar</h3>
+          {/* ─── Dinamik: faol seanslar soni ─── */}
+          <h3 style={{fontWeight:700,fontSize:15,color:'var(--text)'}}>Faol seanslar ({sessions.length})</h3>
           <button className="btn btn-outline btn-sm" style={{color:'#DC2626',borderColor:'#DC2626'}} onClick={()=>setConfirmModal({title:'Barcha seanslar tugatilsinmi?',message:'Joriy qurilmadan tashqari barchasi chiqariladi.',confirmText:'Tugatish',danger:true,onConfirm:()=>setSessions(s=>s.filter(x=>x.current))})}>Barchasini tugatish</button>
         </div>
         {sessions.map(s=>(
@@ -2040,56 +2332,77 @@ function SecurityTab({ user, logout, setPage, showToast, setConfirmModal }) {
 // ADD LISTING — ADMIN ONLY
 // ═══════════════════════════════════════════════════════════════
 function AddListingPage({ setPage }) {
-  const { t, user, addListing } = useApp();
+  const { t, user, addListing, regions } = useApp();
   const [step, setStep] = useState(1);
   const [done, setDone] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const [basic, setBasic] = useState({title:'',district:'Mirabad',address:'',propertyType:'Kvartira',city:'Tashkent'});
-  const [specs, setSpecs] = useState({totalArea:'',livingArea:'',rooms:2,amenities:[],floorLevel:'4',totalFloors:''});
+  const [basic, setBasic] = useState({ title: '', district: 'Mirabad', address: '', propertyType: 'Kvartira', city: 'Tashkent' });
+  const [specs, setSpecs] = useState({ totalArea: '', livingArea: '', rooms: 2, amenities: [], floorLevel: '4', totalFloors: '' });
   const [photos, setPhotos] = useState([]);
-  const [priceData, setPriceData] = useState({price:'',listingType:'sale',deposit:'',negotiable:false});
+  const [photoFiles, setPhotoFiles] = useState([]);
+  const [priceData, setPriceData] = useState({ price: '', listingType: 'sale', deposit: '', negotiable: false });
   const fileRef = useRef(null);
-  const amenityList = ['Air Conditioning','Central Heating','High-speed WiFi','Smart Home','Balcony','Parking Space','Security','Pool','Garden','Intercom','Gym','Storage'];
+  const amenityList = ['Air Conditioning', 'Central Heating', 'High-speed WiFi', 'Smart Home', 'Balcony', 'Parking Space', 'Security', 'Pool', 'Garden', 'Intercom', 'Gym', 'Storage'];
 
   const qualityScore = Math.min(100,
-    (basic.title.length>5?20:0)+(basic.address.length>5?10:0)+
-    (specs.totalArea?15:0)+(specs.amenities.length*4)+(photos.length*8)+(priceData.price?15:0)
+    (basic.title.length > 5 ? 20 : 0) + (basic.address.length > 5 ? 10 : 0) +
+    (specs.totalArea ? 15 : 0) + (specs.amenities.length * 4) + (photos.length * 8) + (priceData.price ? 15 : 0)
   );
 
-  const toggleAmenity = a => setSpecs(s=>({...s,amenities:s.amenities.includes(a)?s.amenities.filter(x=>x!==a):[...s.amenities,a]}));
+  const toggleAmenity = a => setSpecs(s => ({ ...s, amenities: s.amenities.includes(a) ? s.amenities.filter(x => x !== a) : [...s.amenities, a] }));
 
   const handlePhotos = e => {
-    Array.from(e.target.files).forEach(file=>{
-      const r=new FileReader();r.onload=ev=>setPhotos(p=>[...p,ev.target.result]);r.readAsDataURL(file);
+    const files = Array.from(e.target.files);
+    setPhotoFiles(prev => [...prev, ...files]);
+    files.forEach(file => {
+      const r = new FileReader();
+      r.onload = ev => setPhotos(p => [...p, ev.target.result]);
+      r.readAsDataURL(file);
     });
   };
 
   const validate = (s) => {
-    const errs={};
-    if(s===1){if(!basic.title.trim()) errs.title="Sarlavha kiritilmadi";if(!basic.address.trim()) errs.address="Manzil kiritilmadi";}
-    if(s===2){if(!specs.totalArea||parseInt(specs.totalArea)<10) errs.totalArea="Maydon 10m²dan katta bo'lishi kerak";}
-    if(s===3){if(photos.length===0) errs.photos="Kamida 1 ta rasm zarur";}
-    if(s===4){if(!priceData.price||parseInt(priceData.price)<1000) errs.price="To'g'ri narx kiriting (min $1,000)";}
-    setErrors(errs);return Object.keys(errs).length===0;
+    const errs = {};
+    if (s===1) { if (!basic.title.trim()) errs.title="Sarlavha kiritilmadi"; if (!basic.address.trim()) errs.address="Manzil kiritilmadi"; }
+    if (s===2) { if (!specs.totalArea||parseInt(specs.totalArea)<10) errs.totalArea="Maydon 10m²dan katta bo'lishi kerak"; }
+    if (s===3) { if (photos.length===0) errs.photos="Kamida 1 ta rasm zarur"; }
+    if (s===4) { if (!priceData.price||parseInt(priceData.price)<1000) errs.price="To'g'ri narx kiriting (min $1,000)"; }
+    setErrors(errs); return Object.keys(errs).length===0;
   };
 
-  const goNext = () => { if(validate(step)) setStep(step+1); };
+  const goNext = () => { if (validate(step)) setStep(step+1); };
 
-  const handlePublish = () => {
-    if(!validate(4)) return;
-    const newL={
-      id:Date.now(),title:basic.title,district:basic.district,city:basic.city,address:basic.address,
-      price:parseInt(priceData.price),pricePerM2:Math.round(parseInt(priceData.price)/(parseInt(specs.totalArea)||80)),
-      estimatedValue:Math.round(parseInt(priceData.price)*1.05),
-      rooms:typeof specs.rooms==='number'?specs.rooms:parseInt(specs.rooms)||1,
-      size:parseInt(specs.totalArea)||80,floor:parseInt(specs.floorLevel)||4,totalFloors:parseInt(specs.totalFloors)||12,
-      status:'fair',badge:'Fair Value',
-      images:photos.length>0?photos:['https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=600&auto=format&fit=crop'],
-      amenities:specs.amenities,description:`${basic.title}. ${basic.district} tumanida joylashgan.`,
-      views:0,favorites:0,inquiries:0,
-      agent:{name:user.name,title:'Admin',rating:5.0,reviews:0}
-    };
-    addListing(newL);setDone(true);setTimeout(()=>setPage('listings'),2500);
+  const handlePublish = async () => {
+    if (!validate(4)) return;
+    try {
+      setLoading(true);
+      const formData = new FormData();
+      formData.append('title', basic.title);
+      formData.append('district', basic.district);
+      formData.append('city', basic.city);
+      formData.append('address', basic.address);
+      formData.append('propertyType', basic.propertyType);
+      formData.append('price', priceData.price);
+      formData.append('size', specs.totalArea);
+      formData.append('livingArea', specs.livingArea||'');
+      formData.append('rooms', specs.rooms);
+      formData.append('floor', specs.floorLevel||'1');
+      formData.append('totalFloors', specs.totalFloors||'1');
+      formData.append('description', `${basic.title}. ${basic.district} tumanida joylashgan.`);
+      formData.append('listingType', priceData.listingType);
+      formData.append('negotiable', priceData.negotiable);
+      specs.amenities.forEach(a => formData.append('amenities', a));
+      photoFiles.forEach(file => formData.append('images', file));
+
+      const data = await api.createListing(formData);
+      addListing(data.listing || data);
+      setDone(true);
+      setTimeout(() => setPage('listings'), 2500);
+    } catch (err) {
+      console.error("Publish error", err);
+      alert("Xatolik: " + err.message);
+    } finally { setLoading(false); }
   };
 
   if (!user||user.role!=='admin') return (
@@ -2113,7 +2426,12 @@ function AddListingPage({ setPage }) {
     </div>
   );
 
-  const stepLabels=[t.add_listing.basic_info,t.add_listing.specs,t.add_listing.media,t.add_listing.price];
+  const stepLabels = [t.add_listing.basic_info, t.add_listing.specs, t.add_listing.media, t.add_listing.price];
+
+  // ─── Dinamik: narx tahlili — haqiqiy m² narx ───
+  const liveM2Price = priceData.price && specs.totalArea
+    ? Math.round(parseInt(priceData.price) / (parseInt(specs.totalArea) || 1))
+    : 0;
 
   return (
     <div className="page">
@@ -2131,7 +2449,6 @@ function AddListingPage({ setPage }) {
         </div>
 
         <div style={{display:'grid',gridTemplateColumns:'1fr 280px',gap:24}}>
-          {/* ── STEP 1 ── */}
           {step===1&&(
             <div className="wizard-card fade-in">
               <h2 style={{fontWeight:700,marginBottom:6,color:'var(--text)'}}>{t.add_listing.basic_info}</h2>
@@ -2151,7 +2468,7 @@ function AddListingPage({ setPage }) {
                 <div>
                   <label className="label">{t.add_listing.city_label}</label>
                   <select className="select" value={basic.city} onChange={e=>setBasic(b=>({...b,city:e.target.value}))}>
-                    {ALL_REGIONS.map(r=><option key={r.city}>{r.city}</option>)}
+                    {regions.map(r=><option key={r.city}>{r.city}</option>)}
                   </select>
                 </div>
               </div>
@@ -2164,9 +2481,7 @@ function AddListingPage({ setPage }) {
                 <label className="label">{t.add_listing.property_type_label}</label>
                 <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                   {['Kvartira','Villa','Studiya','Penthouse'].map(ty=>(
-                    <button key={ty} onClick={()=>setBasic(b=>({...b,propertyType:ty}))} style={{padding:'8px 14px',border:`2px solid ${basic.propertyType===ty?'var(--primary)':'var(--border)'}`,borderRadius:8,background:basic.propertyType===ty?'var(--bg3)':'transparent',color:basic.propertyType===ty?'var(--primary)':'var(--text)',fontWeight:600,cursor:'pointer',fontSize:13,transition:'all 0.2s'}}>
-                      {ty}
-                    </button>
+                    <button key={ty} onClick={()=>setBasic(b=>({...b,propertyType:ty}))} style={{padding:'8px 14px',border:`2px solid ${basic.propertyType===ty?'var(--primary)':'var(--border)'}`,borderRadius:8,background:basic.propertyType===ty?'var(--bg3)':'transparent',color:basic.propertyType===ty?'var(--primary)':'var(--text)',fontWeight:600,cursor:'pointer',fontSize:13,transition:'all 0.2s'}}>{ty}</button>
                   ))}
                 </div>
               </div>
@@ -2177,7 +2492,6 @@ function AddListingPage({ setPage }) {
             </div>
           )}
 
-          {/* ── STEP 2 ── */}
           {step===2&&(
             <div className="wizard-card fade-in">
               <h2 style={{fontWeight:700,marginBottom:6,color:'var(--text)'}}>{t.add_listing.specs}</h2>
@@ -2219,7 +2533,6 @@ function AddListingPage({ setPage }) {
             </div>
           )}
 
-          {/* ── STEP 3 ── */}
           {step===3&&(
             <div className="wizard-card fade-in">
               <h2 style={{fontWeight:700,marginBottom:6,color:'var(--text)'}}>{t.add_listing.media}</h2>
@@ -2247,6 +2560,7 @@ function AddListingPage({ setPage }) {
                   </div>
                   <div style={{marginTop:10,padding:10,background:'var(--bg3)',borderRadius:8,display:'flex',alignItems:'center',gap:8}}>
                     <CheckCircle size={14} color="#10B981"/>
+                    {/* ─── Dinamik: yuklangan rasmlar soni ─── */}
                     <span style={{fontSize:13,color:'var(--text)'}}>{photos.length} ta rasm yuklandi</span>
                     {photos.length>=3&&<span style={{fontSize:11,color:'#10B981',fontWeight:600,marginLeft:'auto'}}>Ko'rishlar 3x oshadi!</span>}
                   </div>
@@ -2259,7 +2573,6 @@ function AddListingPage({ setPage }) {
             </div>
           )}
 
-          {/* ── STEP 4 ── */}
           {step===4&&(
             <div className="wizard-card fade-in">
               <h2 style={{fontWeight:700,marginBottom:6,color:'var(--text)'}}>{t.add_listing.price}</h2>
@@ -2268,9 +2581,7 @@ function AddListingPage({ setPage }) {
                 <label className="label">E'lon turi</label>
                 <div style={{display:'flex',gap:8}}>
                   {[['sale',t.add_listing.for_sale||'Sotish'],['rent',t.add_listing.for_rent||'Ijaraga']].map(([val,label])=>(
-                    <button key={val} onClick={()=>setPriceData(p=>({...p,listingType:val}))} style={{flex:1,padding:'10px',border:`2px solid ${priceData.listingType===val?'var(--primary)':'var(--border)'}`,borderRadius:8,background:priceData.listingType===val?'var(--bg3)':'transparent',color:priceData.listingType===val?'var(--primary)':'var(--text)',fontWeight:600,cursor:'pointer',fontSize:14,transition:'all 0.2s'}}>
-                      {label}
-                    </button>
+                    <button key={val} onClick={()=>setPriceData(p=>({...p,listingType:val}))} style={{flex:1,padding:'10px',border:`2px solid ${priceData.listingType===val?'var(--primary)':'var(--border)'}`,borderRadius:8,background:priceData.listingType===val?'var(--bg3)':'transparent',color:priceData.listingType===val?'var(--primary)':'var(--text)',fontWeight:600,cursor:'pointer',fontSize:14,transition:'all 0.2s'}}>{label}</button>
                   ))}
                 </div>
               </div>
@@ -2281,7 +2592,8 @@ function AddListingPage({ setPage }) {
                   <input className="input" type="number" style={{paddingLeft:28,borderColor:errors.price?'#DC2626':undefined}} placeholder="85000" value={priceData.price} onChange={e=>{setPriceData(p=>({...p,price:e.target.value}));setErrors(e=>({...e,price:undefined}));}}/>
                 </div>
                 {errors.price&&<p style={{fontSize:12,color:'#DC2626',marginTop:4}}>{errors.price}</p>}
-                {priceData.price&&specs.totalArea&&<p style={{fontSize:12,color:'var(--tertiary)',marginTop:6,fontWeight:600,display:'flex',alignItems:'center',gap:4}}><TrendingUp size={12}/> ≈ ${Math.round(parseInt(priceData.price)/(parseInt(specs.totalArea)||80))}/m²</p>}
+                {/* ─── Dinamik: kiritilgan narx asosida m² narxi ─── */}
+                {priceData.price&&specs.totalArea&&<p style={{fontSize:12,color:'var(--tertiary)',marginTop:6,fontWeight:600,display:'flex',alignItems:'center',gap:4}}><TrendingUp size={12}/> ≈ ${liveM2Price.toLocaleString()}/m²</p>}
               </div>
               {priceData.listingType==='rent'&&(
                 <div style={{marginBottom:14}}>
@@ -2300,7 +2612,12 @@ function AddListingPage({ setPage }) {
                 <div style={{background:'var(--bg3)',borderRadius:12,padding:16,marginBottom:20,animation:'fadeIn 0.3s ease'}}>
                   <div style={{fontWeight:700,fontSize:13,marginBottom:10,color:'var(--text)',display:'flex',alignItems:'center',gap:6}}><BarChart2 size={14} color="var(--primary)"/> Narx Tahlili</div>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}}>
-                    {[['Kiritilgan',fmtPrice(parseInt(priceData.price))],['Taxminiy',fmtPrice(Math.round(parseInt(priceData.price)*1.05))],['Narx/m²',specs.totalArea?`$${Math.round(parseInt(priceData.price)/(parseInt(specs.totalArea)||80))}/m²`:'—']].map(([k,v])=>(
+                    {/* ─── Dinamik: barcha narx tahlili sonlari ─── */}
+                    {[
+                      ['Kiritilgan', fmtPrice(parseInt(priceData.price))],
+                      ['Taxminiy', fmtPrice(Math.round(parseInt(priceData.price)*1.05))],
+                      ['Narx/m²', specs.totalArea && liveM2Price > 0 ? `$${liveM2Price.toLocaleString()}/m²` : '—']
+                    ].map(([k,v])=>(
                       <div key={k} style={{textAlign:'center'}}>
                         <div style={{fontSize:11,color:'var(--text3)',marginBottom:3}}>{k}</div>
                         <div style={{fontWeight:700,fontFamily:'Sora,sans-serif',fontSize:14,color:'var(--text)'}}>{v}</div>
@@ -2311,8 +2628,8 @@ function AddListingPage({ setPage }) {
               )}
               <div style={{display:'flex',justifyContent:'space-between',gap:10}}>
                 <button className="btn btn-outline" onClick={()=>setStep(3)}><ChevronLeft size={15}/> {t.add_listing.back}</button>
-                <button className="btn btn-primary btn-lg" style={{flex:1,justifyContent:'center'}} onClick={handlePublish}>
-                  <CheckCircle size={16}/> {t.add_listing.publish_btn}
+                <button className="btn btn-primary btn-lg" style={{flex:1,justifyContent:'center'}} onClick={handlePublish} disabled={loading}>
+                  {loading?<><RefreshCw size={15} className="spin"/> Yuklanmoqda...</>:<><CheckCircle size={16}/> {t.add_listing.publish_btn}</>}
                 </button>
               </div>
             </div>
@@ -2340,10 +2657,12 @@ function AddListingPage({ setPage }) {
               <div style={{fontSize:12,fontWeight:700,color:'var(--text2)',marginBottom:10,display:'flex',alignItems:'center',gap:6}}><Eye size={12}/> {t.add_listing.live_preview}</div>
               <div style={{height:110,borderRadius:8,overflow:'hidden',marginBottom:8,background:'var(--bg3)',display:'flex',alignItems:'center',justifyContent:'center',position:'relative'}}>
                 {photos[0]?<img src={photos[0]} style={{width:'100%',height:'100%',objectFit:'cover'}} alt="preview"/>:<div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6,color:'var(--text3)'}}><Home size={28} className="float-anim"/><span style={{fontSize:11}}>Rasm kutilmoqda...</span></div>}
+                {/* ─── Dinamik: rasm soni ─── */}
                 {photos.length>1&&<div style={{position:'absolute',bottom:4,right:4,background:'rgba(0,0,0,0.6)',color:'#fff',fontSize:10,padding:'2px 6px',borderRadius:6}}>+{photos.length-1}</div>}
               </div>
               <div style={{fontWeight:700,fontSize:13,color:'var(--text)',marginBottom:2}}>{basic.title||'Mulk nomi...'}</div>
               <div style={{fontSize:12,color:'var(--text3)',marginBottom:5,display:'flex',alignItems:'center',gap:4}}><MapPin size={11}/> {basic.district}, {basic.city}</div>
+              {/* ─── Dinamik: preview narx ─── */}
               {priceData.price&&<div style={{fontFamily:'Sora,sans-serif',fontWeight:800,fontSize:17,color:'var(--primary)',marginBottom:5}}>{fmtPrice(parseInt(priceData.price)||0)}</div>}
               <div style={{display:'flex',gap:10,fontSize:12,color:'var(--text2)'}}>
                 {specs.totalArea&&<span style={{display:'flex',alignItems:'center',gap:2}}><Maximize2 size={11}/>{specs.totalArea}m²</span>}
@@ -2369,6 +2688,7 @@ function AddListingPage({ setPage }) {
     </div>
   );
 }
+
 // ═══════════════════════════════════════════════════════════════
 // FOOTER
 // ═══════════════════════════════════════════════════════════════
@@ -2427,3 +2747,4 @@ function AppInner() {
 export default function App() {
   return <AppProvider><AppInner/></AppProvider>;
 }
+
